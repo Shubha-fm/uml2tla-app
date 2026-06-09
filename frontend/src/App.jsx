@@ -302,57 +302,20 @@ function RenderDiagram({ model, setModel }) {
 }
 
 function SvgBase({ children, onMove, onUp, onBackground }) {
-  const stageRef = useRef(null);
-  const [zoom, setZoom] = useState(1);
-
-  useEffect(() => {
-    window.__umlCanvasZoom = zoom;
-  }, [zoom]);
-
-  function changeZoom(nextZoom) {
-    const value = Math.max(0.55, Math.min(2.6, Number(nextZoom.toFixed(2))));
-    setZoom(value);
-  }
-
-  function panCanvas(dx, dy = 0) {
-    if (!stageRef.current) return;
-    stageRef.current.scrollBy({ left: dx, top: dy, behavior: "smooth" });
-  }
-
   return (
-    <div
-      ref={stageRef}
-      className="svg-stage"
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerLeave={onUp}
-    >
-      <div className="mobile-canvas-tools" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
-        <button type="button" onClick={() => panCanvas(-180)}>←</button>
-        <button type="button" onClick={() => panCanvas(180)}>→</button>
-        <button type="button" onClick={() => changeZoom(zoom - 0.15)}>−</button>
-        <span>{Math.round(zoom * 100)}%</span>
-        <button type="button" onClick={() => changeZoom(zoom + 0.15)}>+</button>
-        <button type="button" onClick={() => { changeZoom(1); panCanvas(-9999, -9999); }}>Reset</button>
-      </div>
-
-      <div
-        className="svg-zoom-wrap"
-        style={{ width: `${900 * zoom}px`, height: `${560 * zoom}px` }}
-      >
-        <svg width="100%" height="100%" viewBox="0 0 900 560" onPointerDown={onBackground}>
-          <defs>
-            <pattern id="grid" width="18" height="18" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="1" fill="#e3e8ef"/>
-            </pattern>
-            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L9,3 z" fill="#111"/>
-            </marker>
-          </defs>
-          <rect width="900" height="560" fill="url(#grid)" />
-          {children}
-        </svg>
-      </div>
+    <div className="svg-stage" onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}>
+      <svg width="100%" height="100%" viewBox="0 0 900 560" onPointerDown={onBackground}>
+        <defs>
+          <pattern id="grid" width="18" height="18" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="#e3e8ef"/>
+          </pattern>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#111"/>
+          </marker>
+        </defs>
+        <rect width="900" height="560" fill="url(#grid)" />
+        {children}
+      </svg>
     </div>
   );
 }
@@ -404,9 +367,8 @@ function useDrag(model, setModel, collectionName) {
 
   function move(e) {
     if (!drag) return;
-    const zoom = window.__umlCanvasZoom || 1;
-    const dx = (e.clientX - drag.startX) / zoom;
-    const dy = (e.clientY - drag.startY) / zoom;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
     setModel({
       ...model,
       [collectionName]: model[collectionName].map(item =>
@@ -1221,25 +1183,6 @@ function App(){
   const [page,setPage]=useState("home");
   const [data,setData]=useState(null);
   const fileInput=useRef(null);
-  const appViewportRef = useRef(null);
-  const [appZoom, setAppZoom] = useState(1);
-
-  function changeAppZoom(nextZoom) {
-    const value = Math.max(0.55, Math.min(1.8, Number(nextZoom.toFixed(2))));
-    setAppZoom(value);
-  }
-
-  function panWholeApp(dx, dy = 0) {
-    if (!appViewportRef.current) return;
-    appViewportRef.current.scrollBy({ left: dx, top: dy, behavior: "smooth" });
-  }
-
-  function resetWholeAppView() {
-    setAppZoom(1);
-    if (!appViewportRef.current) return;
-    appViewportRef.current.scrollTo({ left: 0, top: 0, behavior: "smooth" });
-  }
-
   useEffect(()=>localStorage.setItem("uml2tla_five_project",JSON.stringify(model)),[model]);
 
   function loadTemplate(kind){ setModel(JSON.parse(JSON.stringify(templates[kind]))); setActive("editor"); setData(null); }
@@ -1265,86 +1208,67 @@ function App(){
   else content=<Dashboard model={model} data={data}/>;
 
   return (
-    <div
-      ref={appViewportRef}
-      className="app-viewport"
-      style={{ "--app-zoom": appZoom }}
-    >
-      <div className="whole-app-tools" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
-        <button type="button" onClick={() => panWholeApp(-240)}>←</button>
-        <button type="button" onClick={() => panWholeApp(240)}>→</button>
-        <button type="button" onClick={() => panWholeApp(0, -220)}>↑</button>
-        <button type="button" onClick={() => panWholeApp(0, 220)}>↓</button>
-        <button type="button" onClick={() => changeAppZoom(appZoom - 0.1)}>−</button>
-        <span>{Math.round(appZoom * 100)}%</span>
-        <button type="button" onClick={() => changeAppZoom(appZoom + 0.1)}>+</button>
-        <button type="button" onClick={resetWholeAppView}>Reset</button>
-      </div>
-
-      <div className="app-scale-content">
-        <div className="app">
-          {page === "home" ? (
-            <FirstPage
-              model={model}
-              setModel={setModel}
-              loadTemplate={loadTemplate}
-              startConverter={() => { setActive("editor"); setPage("convert"); }}
-            />
-          ) : (
-            <>
-              <Header model={model} onVerify={convert} onImport={() => fileInput.current.click()} onDownloadAll={downloadAll}/>
-              <input ref={fileInput} type="file" accept="application/json" hidden onChange={importProject}/>
-              <div className="body">
-                <Sidebar active={active} setActive={setActive} model={model} loadTemplate={loadTemplate}/>
-                <main className="workspace">
-                  <div className="back-row">
-                    <button className="mini" onClick={() => setPage("home")}>← First Page</button>
-                    <button className="mini primary-mini" onClick={convert}>Generate TLA+ and Python</button>
-                  </div>
-                  {active === "editor" ? (
-                    <div className="convert-layout">
-                      <section className="large-diagram-area">
-                        <Panel title={`${model.diagram_type.replace("_"," ")} Diagram Canvas`}>
-                          <div className="large-diagram-with-props">
-                            <RenderDiagram model={model} setModel={setModel}/>
-                            <PropertiesPanel model={model} setModel={setModel}/>
-                          </div>
-                        </Panel>
-                      </section>
-
-                      <aside className="convert-side-panel">
-                        <ResultPanel data={data}/>
-                      </aside>
-
-                      <section className="code-row">
-                        <Panel title="TLA+ Specification" actions={
-                          <>
-                            <button className="mini" onClick={() => copy(data?.tla || "")}><Copy size={15}/> Copy</button>
-                            <button className="mini" onClick={() => downloadText(`${model.name}.tla`, data?.tla || "")}><Download size={15}/> .tla</button>
-                          </>
-                        }>
-                          <CodeBlock code={data?.tla || "Click Generate TLA+ and Python."}/>
-                        </Panel>
-                        <Panel title="Python Code" actions={
-                          <>
-                            <button className="mini" onClick={() => copy(data?.python_code || "")}><Copy size={15}/> Copy</button>
-                            <button className="mini" onClick={() => downloadText(`${model.name}.py`, data?.python_code || "")}><Download size={15}/> .py</button>
-                          </>
-                        }>
-                          <CodeBlock code={data?.python_code || "Click Generate TLA+ and Python."}/>
-                        </Panel>
-                        <TraceTable trace={data?.trace}/>
-                      </section>
-                    </div>
-                  ) : (
-                    <div className="single-view">{content}</div>
-                  )}
-                </main>
+    <div className="app">
+      {page === "home" ? (
+        <FirstPage
+          model={model}
+          setModel={setModel}
+          loadTemplate={loadTemplate}
+          startConverter={() => { setActive("editor"); setPage("convert"); }}
+        />
+      ) : (
+        <>
+          <Header model={model} onVerify={convert} onImport={() => fileInput.current.click()} onDownloadAll={downloadAll}/>
+          <input ref={fileInput} type="file" accept="application/json" hidden onChange={importProject}/>
+          <div className="body">
+            <Sidebar active={active} setActive={setActive} model={model} loadTemplate={loadTemplate}/>
+            <main className="workspace">
+              <div className="back-row">
+                <button className="mini" onClick={() => setPage("home")}>← First Page</button>
+                <button className="mini primary-mini" onClick={convert}>Generate TLA+ and Python</button>
               </div>
-            </>
-          )}
-        </div>
-      </div>
+              {active === "editor" ? (
+                <div className="convert-layout">
+                  <section className="large-diagram-area">
+                    <Panel title={`${model.diagram_type.replace("_"," ")} Diagram Canvas`}>
+                      <div className="large-diagram-with-props">
+                        <RenderDiagram model={model} setModel={setModel}/>
+                        <PropertiesPanel model={model} setModel={setModel}/>
+                      </div>
+                    </Panel>
+                  </section>
+
+                  <aside className="convert-side-panel">
+                    <ResultPanel data={data}/>
+                  </aside>
+
+                  <section className="code-row">
+                    <Panel title="TLA+ Specification" actions={
+                      <>
+                        <button className="mini" onClick={() => copy(data?.tla || "")}><Copy size={15}/> Copy</button>
+                        <button className="mini" onClick={() => downloadText(`${model.name}.tla`, data?.tla || "")}><Download size={15}/> .tla</button>
+                      </>
+                    }>
+                      <CodeBlock code={data?.tla || "Click Generate TLA+ and Python."}/>
+                    </Panel>
+                    <Panel title="Python Code" actions={
+                      <>
+                        <button className="mini" onClick={() => copy(data?.python_code || "")}><Copy size={15}/> Copy</button>
+                        <button className="mini" onClick={() => downloadText(`${model.name}.py`, data?.python_code || "")}><Download size={15}/> .py</button>
+                      </>
+                    }>
+                      <CodeBlock code={data?.python_code || "Click Generate TLA+ and Python."}/>
+                    </Panel>
+                    <TraceTable trace={data?.trace}/>
+                  </section>
+                </div>
+              ) : (
+                <div className="single-view">{content}</div>
+              )}
+            </main>
+          </div>
+        </>
+      )}
     </div>
   )
 }
