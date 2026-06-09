@@ -1,0 +1,8 @@
+Rename fixed.
+
+Changes:
+1. Added a dedicated Properties panel beside the diagram.
+2. You can rename all nodes directly from the panel.
+3. You can edit edge, transition, flow, association, relationship, and message labels.
+4. Inspector panel now stops clicks from bubbling into the canvas, so typing no longer gets interrupted.
+5. Template switching now uses deep copies to avoid stale shared object issues.

@@ -1,0 +1,5 @@
+Applied to all five UML diagram renderers:
+1. Duplicate/opposite labels are moved into separate lanes above/below the line.
+2. Labels use a white rounded background.
+3. Edit popup opens on double-click for nodes and edges.
+4. Single click remains for selection/connect behavior.

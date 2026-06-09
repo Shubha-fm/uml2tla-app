@@ -1,0 +1,7 @@
+Updated UI flow:
+1. First page now has a New Project section with project name, author, and description.
+2. User selects one of five UML diagrams on the first page.
+3. Button opens the Convert page.
+4. Convert page now gives the diagram a large main canvas.
+5. Properties panel stays beside the diagram.
+6. TLA+, Python, trace, and verification are arranged beside/below the diagram instead of shrinking the diagram into a small corner.

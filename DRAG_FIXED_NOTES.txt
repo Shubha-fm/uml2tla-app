@@ -1,0 +1,8 @@
+Fixed diagram editor.
+
+Changes:
+1. Nodes can now be dragged and moved on canvas.
+2. Buttons are moved into a clean two-row editor header, so they no longer overlap the diagram.
+3. Separate Select and Connect modes prevent accidental links while moving.
+4. Use Case, Class, Sequence, Activity, and State Machine diagrams all support add, edit, connect, delete, and drag movement.
+5. Inspector panel edits selected element names or labels.

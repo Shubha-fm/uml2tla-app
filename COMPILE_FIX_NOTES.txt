@@ -1,0 +1,2 @@
+Fixed Vite parse error caused by duplicate editOpen state declarations.
+The app should now compile with npm run dev.

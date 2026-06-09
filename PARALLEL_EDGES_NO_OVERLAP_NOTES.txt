@@ -1,0 +1,4 @@
+Fixed overlap of two labels on the same edge.
+
+Instead of only moving labels, this version draws duplicate or opposite-direction edges as separate curved paths.
+One edge curves above, the other below, and each label is placed on its own curve.

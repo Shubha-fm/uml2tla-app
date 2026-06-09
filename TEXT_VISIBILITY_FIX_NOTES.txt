@@ -1,0 +1,4 @@
+Fixed invisible diagram labels.
+
+Cause: SVG text styling from the edge-label patch made node names render white or unreadable.
+Fix: all SVG node labels and edge labels are forced to dark readable text. Edge labels keep a white background.

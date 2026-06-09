@@ -1,0 +1,6 @@
+Fixed UI issues:
+1. Execution trace now uses a scrollable full-width table.
+2. Removed copy/action icons from execution trace header.
+3. Added pointer-capture behavior and touch-action fixes for reliable node dragging.
+4. Modify/properties popup is smaller and no longer covers much of the diagram.
+5. Canvas and trace panels now respect available height better.

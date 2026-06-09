@@ -1,0 +1,9 @@
+Fixed convert button blank/no-action issue.
+
+Cause: missing edgeLabelOffset and edgeLabelPosition helper functions caused the convert page to crash when diagram rendered.
+
+Fixes:
+1. Added missing edge label helper functions.
+2. Convert button now safely creates project and then opens converter.
+3. Converter always opens on UML Editor tab.
+4. Removed workflow card fully from first page.

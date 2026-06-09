@@ -1,0 +1,5 @@
+Changes:
+1. Edit popup opens only after double-clicking a node or line.
+2. Single click only selects. Drag still moves items.
+3. Duplicate or opposite edge labels now use stronger lanes: one above, one below, then farther lanes.
+4. Edge labels use a white rounded background for readability.

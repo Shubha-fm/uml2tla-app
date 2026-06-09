@@ -1,0 +1,4 @@
+Fixed edge label overlap.
+
+Labels on repeated or opposite-direction edges between the same two nodes are now offset alternately above and below the line.
+A white rounded background is added behind each label for readability.

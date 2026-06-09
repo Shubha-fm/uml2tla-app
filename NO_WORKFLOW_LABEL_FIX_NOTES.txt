@@ -1,0 +1,5 @@
+Changes:
+1. Removed workflow card from the first page.
+2. Edge labels now offset for duplicate/two labels on same line.
+3. One label appears above and another below to avoid overlap.
+4. Added white text backing for better readability on diagram lines.

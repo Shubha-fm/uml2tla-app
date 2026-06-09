@@ -1,0 +1,4 @@
+Directly patched the state-machine diagram renderer.
+1. State-machine edge labels now use fixed lanes above/below the line.
+2. Edit popup opens only on double-click in the old state-machine renderer.
+3. Single click is for selecting/dragging/connecting only.

@@ -1,0 +1,9 @@
+Two-page fixed version.
+
+Changes:
+1. First page added as a landing/dashboard page.
+2. Convert page contains the previous good diagram workspace.
+3. Diagram display restored using the previous visible diagram implementation.
+4. Copy now uses a fallback method and shows success alert.
+5. TLA+ and Python panels now have Copy and Download buttons.
+6. Added a Generate TLA+ and Python button above the converter workspace.
