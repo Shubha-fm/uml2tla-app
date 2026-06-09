@@ -894,12 +894,55 @@ function ActivityView({ model, setModel }) {
     >
       <SvgBase onMove={drag.move} onUp={drag.end} onBackground={(e) => { if (e.target.tagName === "svg" || e.target.tagName === "rect") { setSelected(null); setEditOpen(false); setEditOpen(false); } }}>
         {model.flows.map(f => {
-          const s = byId[f.source], t = byId[f.target];
+          const s = byId[f.source];
+          const t = byId[f.target];
+        
           if (!s || !t) return null;
+        
+          function activityCenter(node) {
+            if (node.type === "initial" || node.type === "final") {
+              return {
+                x: node.x + 28,
+                y: node.y + 28
+              };
+            }
+        
+            if (node.type === "decision") {
+              return {
+                x: node.x + 65,
+                y: node.y + 38
+              };
+            }
+        
+            return {
+              x: node.x + 70,
+              y: node.y + 33
+            };
+          }
+        
+          const a = activityCenter(s);
+          const b = activityCenter(t);
+          const pos = edgeLabelPosition(a.x, a.y, b.x, b.y, edgeLabelOffset(f, model.flows));
+        
           return (
-            <g key={f.id} onPointerDown={e => { e.stopPropagation(); setSelected({ kind: "flow", id: f.id }); }}>
-              <line x1={s.x + 65} y1={s.y + 35} x2={t.x + 65} y2={t.y + 35} markerEnd="url(#arrow)" className="edge"/>
-              {(() => { const pos = edgeLabelPosition(s.x + 65, s.y + 35, t.x + 65, t.y + 35, edgeLabelOffset(f, model.flows)); return <text x={pos.x} y={pos.y}>{f.label}</text>; })()}
+            <g
+              key={f.id}
+              onPointerDown={e => {
+                e.stopPropagation();
+                setSelected({ kind: "flow", id: f.id });
+              }}
+            >
+              <line
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                markerEnd="url(#arrow)"
+                className="edge"
+              />
+              <text x={pos.x} y={pos.y}>
+                {f.label}
+              </text>
             </g>
           );
         })}
