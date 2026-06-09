@@ -1252,70 +1252,72 @@ body,
   }
 }
 
-
-
-
-/* Mobile-friendly page scrolling without canvas left-right movement */
-html,
-body,
-#root {
-  min-height: 100%;
-  height: auto;
-  overflow-x: auto;
-  overflow-y: auto;
-}
-
-.app {
-  min-height: 100vh;
-  height: auto;
-  overflow-x: auto;
-  overflow-y: auto;
-}
-
-/* Canvas should stay fixed inside its panel. No horizontal canvas swipe. */
+/* Mobile canvas panning, left-right swipe, and zoom controls */
 .svg-stage {
   position: relative;
-  overflow: hidden !important;
-  touch-action: none !important;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom !important;
   background: #f8fafc;
 }
 
-.svg-stage svg {
+.svg-zoom-wrap {
+  position: relative;
+  min-width: 900px;
+  min-height: 560px;
+}
+
+.svg-zoom-wrap svg {
   display: block;
   width: 100% !important;
   height: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
 }
 
-/* Users can still drag UML elements, but the canvas itself will not pan left/right. */
-.svg-stage svg g,
-.svg-stage svg rect,
-.svg-stage svg ellipse,
-.svg-stage svg circle,
-.svg-stage svg polygon,
-.svg-stage svg line,
-.svg-stage svg path {
-  touch-action: none !important;
+.mobile-canvas-tools {
+  position: sticky;
+  top: 8px;
+  left: 8px;
+  z-index: 30;
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  margin: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
 }
 
-/* Whole page can still scroll naturally on mobile, but not the canvas panel itself. */
+.mobile-canvas-tools button {
+  min-width: 34px;
+  height: 32px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #174a7c;
+  border-radius: 7px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mobile-canvas-tools span {
+  min-width: 46px;
+  text-align: center;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mobile-canvas-tools button:hover {
+  background: #eaf3ff;
+}
+
+/* Let users swipe the workspace horizontally on small screens */
 @media (max-width: 900px) {
-  html,
-  body,
-  #root {
-    overflow-x: auto !important;
-    overflow-y: auto !important;
-  }
-
-  .app {
-    min-width: 1120px;
-  }
-
   .body {
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .sidebar {
@@ -1324,16 +1326,31 @@ body,
   }
 
   .workspace {
-    min-width: 860px !important;
+    min-width: 760px;
   }
 
   .convert-layout {
-    min-width: 860px !important;
+    min-width: 760px;
+  }
+
+  .mobile-canvas-tools {
+    display: flex;
+    transform: scale(0.95);
+    transform-origin: top left;
   }
 
   .svg-stage {
     min-height: 360px;
-    overflow: hidden !important;
-    touch-action: none !important;
+  }
+
+  .svg-zoom-wrap {
+    min-width: 900px;
+    min-height: 560px;
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-canvas-tools {
+    opacity: 0.92;
   }
 }
