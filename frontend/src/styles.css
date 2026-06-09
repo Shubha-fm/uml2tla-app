@@ -1088,3 +1088,166 @@ body,
   margin-top: 32px;
   padding-bottom: 80px;
 }
+
+
+/* =========================================================
+   FINAL LAYOUT FIXES
+   Fixes:
+   1. Sidebar project box overlapping diagram menu
+   2. Model Checking panel scrolling
+   3. First page scroll and button visibility
+   ========================================================= */
+
+html,
+body,
+#root {
+  min-height: 100%;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app {
+  min-height: 100vh !important;
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* Keep the converter page fitted to the browser window */
+.body {
+  height: calc(100vh - 54px) !important;
+  min-height: 0 !important;
+  display: flex !important;
+  overflow: hidden !important;
+}
+
+/* Sidebar must scroll instead of allowing the project box to overlap */
+.sidebar {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: 24px !important;
+}
+
+/* Remove absolute positioning that caused overlap with State Machine Diagram */
+.project-box {
+  position: static !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 210px !important;
+  margin: 24px 16px 30px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+}
+
+.project-box p {
+  margin: 8px 0 !important;
+  color: #d9e2e8 !important;
+}
+
+/* Workspace keeps the diagram page stable */
+.workspace {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Model Checking side panel scroll fix */
+.convert-side-panel {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.convert-side-panel > .panel {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.convert-side-panel > .panel > .panel-head {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+  background: #f8fafc !important;
+}
+
+.convert-side-panel .result-box {
+  flex-shrink: 0 !important;
+}
+
+.convert-side-panel .info,
+.convert-side-panel h4,
+.convert-side-panel .warnings {
+  flex-shrink: 0 !important;
+}
+
+/* Keep code and trace panels scrollable inside the bottom row */
+.code-row {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.code-row > .panel {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.code,
+.trace-scroll {
+  min-height: 0 !important;
+  overflow: auto !important;
+}
+
+/* First page scroll and button visibility */
+.landing-page,
+.project-first-page {
+  min-height: 100vh !important;
+  height: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: 120px !important;
+}
+
+.landing-actions {
+  position: relative !important;
+  z-index: 20 !important;
+  margin-top: 32px !important;
+  padding-bottom: 80px !important;
+}
+
+.primary-start {
+  position: relative !important;
+  z-index: 21 !important;
+  cursor: pointer !important;
+}
+
+/* Canvas interaction stability */
+.svg-stage,
+.svg-stage svg {
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+.diagram-wrap,
+.svg-stage {
+  min-height: 0 !important;
+}
+
+/* Responsive safety */
+@media (max-height: 760px) {
+  .side-item {
+    height: 39px !important;
+  }
+
+  .side-title {
+    margin: 18px 16px 8px !important;
+  }
+
+  .project-box {
+    margin-top: 16px !important;
+  }
+}
