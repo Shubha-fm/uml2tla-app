@@ -1252,72 +1252,55 @@ body,
   }
 }
 
-/* Mobile canvas panning, left-right swipe, and zoom controls */
+
+/* Mobile-friendly scrolling without zoom buttons or move bars */
+html,
+body,
+#root {
+  min-height: 100%;
+  height: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.app {
+  min-height: 100vh;
+  height: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
 .svg-stage {
   position: relative;
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y pinch-zoom !important;
+  touch-action: pan-x pan-y !important;
   background: #f8fafc;
 }
 
-.svg-zoom-wrap {
-  position: relative;
+.svg-stage svg {
+  display: block;
   min-width: 900px;
   min-height: 560px;
 }
 
-.svg-zoom-wrap svg {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.mobile-canvas-tools {
-  position: sticky;
-  top: 8px;
-  left: 8px;
-  z-index: 30;
-  width: max-content;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px;
-  margin: 8px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
-}
-
-.mobile-canvas-tools button {
-  min-width: 34px;
-  height: 32px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #174a7c;
-  border-radius: 7px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.mobile-canvas-tools span {
-  min-width: 46px;
-  text-align: center;
-  color: #334155;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.mobile-canvas-tools button:hover {
-  background: #eaf3ff;
-}
-
-/* Let users swipe the workspace horizontally on small screens */
+/* Let users swipe the whole converter left/right on small screens, with no visible controls */
 @media (max-width: 900px) {
+  html,
+  body,
+  #root {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+  }
+
+  .app {
+    min-width: 1120px;
+  }
+
   .body {
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar {
@@ -1326,135 +1309,16 @@ body,
   }
 
   .workspace {
-    min-width: 760px;
+    min-width: 860px !important;
   }
 
   .convert-layout {
-    min-width: 760px;
-  }
-
-  .mobile-canvas-tools {
-    display: flex;
-    transform: scale(0.95);
-    transform-origin: top left;
+    min-width: 860px !important;
   }
 
   .svg-stage {
     min-height: 360px;
-  }
-
-  .svg-zoom-wrap {
-    min-width: 900px;
-    min-height: 560px;
-  }
-}
-
-@media (min-width: 901px) {
-  .mobile-canvas-tools {
-    opacity: 0.92;
-  }
-}
-
-
-/* Whole app zoom, horizontal swipe, and full-page panning */
-html,
-body,
-#root {
-  width: 100%;
-  min-height: 100%;
-  overflow: hidden !important;
-}
-
-.app-viewport {
-  --app-zoom: 1;
-  width: 100vw;
-  height: 100vh;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: pan-x pan-y pinch-zoom;
-  background: #e9eef4;
-}
-
-.app-scale-content {
-  zoom: var(--app-zoom);
-  min-width: max(1200px, 100vw);
-  min-height: max(760px, 100vh);
-  transform-origin: top left;
-}
-
-.whole-app-tools {
-  position: fixed;
-  right: 12px;
-  bottom: 12px;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22);
-}
-
-.whole-app-tools button {
-  min-width: 34px;
-  height: 32px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #174a7c;
-  border-radius: 8px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.whole-app-tools button:hover {
-  background: #eaf3ff;
-}
-
-.whole-app-tools span {
-  min-width: 46px;
-  text-align: center;
-  color: #334155;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-/* Keep whole app wider than the phone screen so users can swipe left and right */
-@media (max-width: 900px) {
-  .app-scale-content {
-    min-width: 1180px;
-    min-height: 820px;
-  }
-
-  .app {
-    min-width: 1180px;
-  }
-
-  .body {
-    overflow: visible !important;
-  }
-
-  .workspace {
-    min-width: 880px !important;
-  }
-
-  .convert-layout {
-    min-width: 880px !important;
-  }
-
-  .whole-app-tools {
-    left: 8px;
-    right: auto;
-    bottom: 8px;
-    max-width: calc(100vw - 16px);
-    overflow-x: auto;
-    padding: 6px;
-  }
-
-  .whole-app-tools button {
-    min-width: 32px;
-    height: 31px;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
   }
 }
