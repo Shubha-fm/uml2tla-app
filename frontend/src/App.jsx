@@ -320,7 +320,7 @@ function SvgBase({ children, onMove, onUp, onBackground }) {
   );
 }
 
-function EditorShell({ title, children, selected, editValue, onEdit, onDelete, extra, modeText }) {
+function EditorShell({ title, children, selected, editOpen, editValue, onEdit, onDelete, extra, modeText }) {
   return (
     <div className="diagram-wrap">
       <div className="editor-top">
@@ -459,6 +459,7 @@ function StateMachineView({ model, setModel }) {
     <EditorShell
       title="State Machine Editor"
       selected={selected}
+      editOpen={editOpen}
       editValue={selectedObj?.name ?? selectedObj?.label}
       onEdit={edit}
       onDelete={del}
@@ -586,6 +587,7 @@ function UseCaseView({ model, setModel }) {
     <EditorShell
       title="Use Case Editor"
       selected={selected}
+      editOpen={editOpen}
       editValue={obj?.name ?? obj?.label}
       onEdit={edit}
       onDelete={del}
@@ -695,6 +697,7 @@ function ClassView({ model, setModel }) {
     <EditorShell
       title="Class Diagram Editor"
       selected={selected}
+      editOpen={editOpen}
       editValue={obj?.name ?? obj?.label}
       onEdit={edit}
       onDelete={del}
@@ -785,6 +788,7 @@ function SequenceView({ model, setModel }) {
     <EditorShell
       title="Sequence Diagram Editor"
       selected={selected}
+      editOpen={editOpen}
       editValue={obj?.name ?? obj?.label}
       onEdit={edit}
       onDelete={del}
@@ -872,6 +876,7 @@ function ActivityView({ model, setModel }) {
     <EditorShell
       title="Activity Diagram Editor"
       selected={selected}
+      editOpen={editOpen}
       editValue={obj?.name ?? obj?.label}
       onEdit={edit}
       onDelete={del}
