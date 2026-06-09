@@ -1253,7 +1253,9 @@ body,
 }
 
 
-/* Mobile-friendly scrolling without zoom buttons or move bars */
+
+
+/* Mobile-friendly page scrolling without canvas left-right movement */
 html,
 body,
 #root {
@@ -1270,21 +1272,34 @@ body,
   overflow-y: auto;
 }
 
+/* Canvas should stay fixed inside its panel. No horizontal canvas swipe. */
 .svg-stage {
   position: relative;
-  overflow: auto !important;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y !important;
+  overflow: hidden !important;
+  touch-action: none !important;
   background: #f8fafc;
 }
 
 .svg-stage svg {
   display: block;
-  min-width: 900px;
-  min-height: 560px;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
 }
 
-/* Let users swipe the whole converter left/right on small screens, with no visible controls */
+/* Users can still drag UML elements, but the canvas itself will not pan left/right. */
+.svg-stage svg g,
+.svg-stage svg rect,
+.svg-stage svg ellipse,
+.svg-stage svg circle,
+.svg-stage svg polygon,
+.svg-stage svg line,
+.svg-stage svg path {
+  touch-action: none !important;
+}
+
+/* Whole page can still scroll naturally on mobile, but not the canvas panel itself. */
 @media (max-width: 900px) {
   html,
   body,
@@ -1318,7 +1333,7 @@ body,
 
   .svg-stage {
     min-height: 360px;
-    overflow-x: auto !important;
-    overflow-y: auto !important;
+    overflow: hidden !important;
+    touch-action: none !important;
   }
 }
