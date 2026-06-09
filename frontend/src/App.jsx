@@ -1120,7 +1120,7 @@ function FirstPage({ model, setModel, loadTemplate, startConverter }) {
       <div className="project-header">
         <div>
           <h1>UML to TLA+ and Python Converter</h1>
-          <p>Create a project, choose one UML diagram, draw the model on a large canvas, and generate TLA+ plus Python code.</p>
+          <p>Create a project, choose one UML diagram, draw the model, and generate TLA+ plus Python code.</p>
         </div>
 
       </div>
