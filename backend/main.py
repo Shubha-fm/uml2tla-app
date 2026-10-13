@@ -1,8 +1,12 @@
 from pathlib import Path
+from io import BytesIO
+from zipfile import ZipFile, ZIP_DEFLATED
+import json
+import re
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from models import UMLModel, ConversionResponse
@@ -26,7 +30,7 @@ ASSETS_DIR = FRONTEND_DIST / "assets"
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "UML2TLA+ five diagram backend"}
+    return {"status": "ok", "service": "UML2TLA+ five diagram backend", "version": app.version, "analysis": "structural", "tlc_available": False}
 
 
 @app.post("/api/convert", response_model=ConversionResponse)
@@ -50,6 +54,23 @@ def convert(model: UMLModel):
         verification_kind="structural", cfg=cfg, module_name=module, traceability=mapping,
         warnings=warnings,
     )
+
+
+@app.post("/api/export")
+def export_project(model: UMLModel):
+    result = convert(model)
+    stem = re.sub(r"[^A-Za-z0-9_-]", "_", model.name).strip("_")[:80] or "Model"
+    buffer = BytesIO()
+    with ZipFile(buffer, "w", ZIP_DEFLATED) as archive:
+        archive.writestr("project.json", json.dumps({"schema_version": 2, "model": model.model_dump()}, indent=2))
+        archive.writestr((result.module_name or stem) + ".tla", result.tla)
+        archive.writestr(stem + ".py", result.python_code)
+        archive.writestr("analysis.json", result.model_dump_json(indent=2))
+        archive.writestr("traceability.json", json.dumps(result.traceability, indent=2))
+        if result.cfg:
+            archive.writestr(result.module_name + ".cfg", result.cfg)
+        archive.writestr("README.txt", "UML2TLA+ v4 project export\n\nAnalysis is structural only. TLC has not been run.\nRead analysis.json for warnings and scope.\nGraph modules ignore guard labels and concurrency.\nPython is a prototype, not proved equivalent to TLA+.\nOther diagram TLA+ outputs are draft skeletons.\n")
+    return Response(buffer.getvalue(), media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{stem}_project.zip"'})
 
 
 if ASSETS_DIR.exists():

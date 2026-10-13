@@ -42,6 +42,22 @@ class UpgradeTests(unittest.TestCase):
             ast.parse(r.json()['python_code'])
     def test_api_unknown_does_not_return_html(self):
         self.assertEqual(self.client.get('/api/missing').status_code,404)
+    def test_complete_archive(self):
+        from io import BytesIO
+        from zipfile import ZipFile
+        r=self.client.post('/api/export',json=self.model)
+        self.assertEqual(r.status_code,200,r.text)
+        self.assertEqual(r.headers['content-type'],'application/zip')
+        with ZipFile(BytesIO(r.content)) as z:
+            self.assertIn('Safety_Graph.tla',z.namelist())
+            self.assertIn('Safety_Graph.cfg',z.namelist())
+            self.assertIn('NOT_CHECKED',z.read('analysis.json').decode())
+    def test_export_rejects_invalid_model(self):
+        self.assertEqual(self.client.post('/api/export',json={'diagram_type':'unknown'}).status_code,422)
+    def test_health_version(self):
+        result=self.client.get('/api/health').json()
+        self.assertEqual(result['version'],'4.0.0')
+        self.assertFalse(result['tlc_available'])
     def test_dead_end(self):
         self.model['transitions']=self.model['transitions'][:2]
         data=self.client.post('/api/convert',json=self.model).json()
