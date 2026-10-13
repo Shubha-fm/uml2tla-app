@@ -3,7 +3,7 @@ from models import UMLModel
 
 
 def clean_name(name: str, fallback: str = "Item") -> str:
-    cleaned = "".join(ch if ch.isalnum() else "_" for ch in str(name).strip())
+    cleaned = "".join(ch if ch.isascii() and ch.isalnum() else "_" for ch in str(name).strip())
     cleaned = cleaned.strip("_")
     if not cleaned:
         cleaned = fallback
@@ -18,7 +18,8 @@ def tla_const(name: str) -> str:
 
 
 def py_string(value: str) -> str:
-    return str(value).replace("\\", "\\\\").replace('"', '\\"')
+    import json
+    return json.dumps(str(value), ensure_ascii=True)[1:-1]
 
 
 def guard_from_label(label: str) -> str:
@@ -563,129 +564,6 @@ def generate_python(model: UMLModel) -> str:
 
 
 def verify_model(model: UMLModel):
-    dt = model.diagram_type
-    warnings = []
-    trace = []
-    safety_ok = True
-
-    if dt == "use_case":
-        for i, assoc in enumerate(model.associations):
-            trace.append({"step": i, "action": "allowed_use_case", "association": assoc.label or assoc.id, "safe": True})
-        stats = {"states_explored": max(1, len(model.associations) * 32), "distinct_states": len(model.use_cases), "transitions": len(model.associations), "time_taken": "0.05 sec", "result": "PASSED"}
-        props = [{"name": "AllowedUseCase", "status": "PASSED", "description": "Only associated actors can request use cases."}]
-        if not model.associations:
-            warnings.append("No actor-use case association found.")
-        return trace, stats, props, safety_ok, warnings
-
-    if dt == "class":
-        for i, c in enumerate(model.classes):
-            trace.append({"step": i, "action": "class_loaded", "class": c.name, "safe": True})
-        stats = {"states_explored": max(1, len(model.classes) * 64), "distinct_states": len(model.classes), "transitions": len(model.relationships), "time_taken": "0.06 sec", "result": "PASSED"}
-        props = [{"name": "TypeInvariant", "status": "PASSED", "description": "Objects must belong to declared classes."}]
-        if not model.classes:
-            warnings.append("No class found.")
-        return trace, stats, props, safety_ok, warnings
-
-    if dt == "sequence":
-        ordered = sorted(model.messages, key=lambda m: m.order)
-        for i, m in enumerate(ordered):
-            trace.append({"step": i, "message": m.label, "source": m.source, "target": m.target, "safe": True})
-        stats = {"states_explored": max(1, len(ordered) * 128), "distinct_states": len(ordered) + 1, "transitions": len(ordered), "time_taken": "0.05 sec", "result": "PASSED"}
-        props = [{"name": "MessageOrder", "status": "PASSED", "description": "Messages execute in declared order."}]
-        if not ordered:
-            warnings.append("No sequence messages found.")
-        return trace, stats, props, safety_ok, warnings
-
-    if dt == "activity":
-        action_by_id = {a.id: a for a in model.actions}
-        current = next((a.name for a in model.actions if a.type not in ("initial", "final")), "StartAction")
-        for f in model.flows:
-            src = action_by_id.get(f.source)
-            dst = action_by_id.get(f.target)
-            if src and dst and src.type == "initial":
-                current = dst.name
-                break
-        reached = {current}
-        for i, f in enumerate(model.flows[:10]):
-            src = action_by_id.get(f.source)
-            dst = action_by_id.get(f.target)
-            if src and dst and src.name == current:
-                trace.append({"step": i, "pc": current, "flow": f.label, "safe": True})
-                current = dst.name
-                reached.add(current)
-        stats = {"states_explored": max(1, len(model.actions) * 128), "distinct_states": len(reached), "transitions": len(model.flows), "time_taken": "0.07 sec", "result": "PASSED"}
-        props = [{"name": "WorkflowProgress", "status": "PASSED", "description": "At least one workflow path is executable."}]
-        if not model.flows:
-            warnings.append("No activity flow found.")
-        return trace, stats, props, safety_ok, warnings
-
-    # state machine verification
-    state_by_id = {s.id: s for s in model.states}
-    normal_states = [s for s in model.states if s.type == "state"]
-    initial = normal_states[0].name if normal_states else "Idle"
-    for t in model.transitions:
-        src = state_by_id.get(t.source)
-        dst = state_by_id.get(t.target)
-        if src and dst and src.type == "initial" and dst.type == "state":
-            initial = dst.name
-            break
-
-    scenarios = [
-        {"event": "", "hazard": False, "severity": "Normal"},
-        {"event": "hazard_detected", "hazard": True, "severity": "Normal"},
-        {"event": "hazard_critical", "hazard": True, "severity": "Critical"},
-        {"event": "reset", "hazard": False, "severity": "Normal"},
-        {"event": "hazard_clear", "hazard": False, "severity": "Normal"},
-    ]
-
-    current = initial
-    reached = {current}
-    transition_count = 0
-    for step, env in enumerate(scenarios):
-        hazard = env["hazard"]
-        severity = env["severity"]
-        event = env["event"]
-        safe_now = not (hazard is True and current == "Cruise" and step > 0)
-        safety_ok = safety_ok and safe_now
-        trace.append({"step": step, "mode": current, "event": event, "hazard": hazard, "severity": severity, "safe": safe_now})
-
-        for t in model.transitions:
-            src = state_by_id.get(t.source)
-            dst = state_by_id.get(t.target)
-            if not src or not dst or src.type != "state" or dst.type != "state":
-                continue
-            if src.name != current:
-                continue
-            label = t.label.lower().strip()
-            enabled = (
-                ("critical" in label and hazard is True and severity == "Critical") or
-                ("detected" in label and hazard is True) or
-                (("clear" in label or "reset" in label) and hazard is False) or
-                (label and event == label) or
-                (not label)
-            )
-            if enabled:
-                current = dst.name
-                reached.add(current)
-                transition_count += 1
-                break
-
-    stats = {
-        "states_explored": max(1, len(normal_states) * len(scenarios) * 1024),
-        "distinct_states": len(reached),
-        "transitions": transition_count,
-        "time_taken": "0.12 sec",
-        "result": "PASSED" if safety_ok else "FAILED"
-    }
-    props = [
-        {"name": "TypeInvariant", "status": "PASSED", "description": "Variables remain inside declared domains."},
-        {"name": "Safety", "status": "PASSED" if safety_ok else "FAILED", "description": "hazard = TRUE implies mode is not Cruise."},
-        {"name": "Reachability", "status": "PASSED", "description": f"Reached {len(reached)} state(s): {', '.join(sorted(reached))}."}
-    ]
-    if not any(s.type == "initial" for s in model.states):
-        warnings.append("No initial node found. The first normal state was used.")
-    if not normal_states:
-        warnings.append("No normal state found.")
-    if not model.transitions:
-        warnings.append("No transitions found.")
-    return trace, stats, props, safety_ok, warnings
+    """Compatibility entry point for measured structural diagnostics."""
+    from analysis import analyze
+    return analyze(model)

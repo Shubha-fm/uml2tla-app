@@ -116,6 +116,10 @@ class ConversionResponse(BaseModel):
     trace: List[Dict[str, object]]
     statistics: Dict[str, object]
     properties: List[Dict[str, object]]
-    safety_satisfied: bool
+    safety_satisfied: Optional[bool] = None
+    verification_kind: str = "structural"
+    cfg: str = ""
+    module_name: str = ""
+    traceability: List[Dict[str, object]] = []
     result: str
     warnings: List[str]
