@@ -6,3 +6,6 @@ frontend/dist/
 .env
 
 backend/tools/*.jar
+
+frontend/test-results/
+frontend/playwright-report/

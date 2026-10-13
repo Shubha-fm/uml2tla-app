@@ -14,7 +14,7 @@ from converter import generate_tla, generate_python
 from analysis import analyze, validate_model, graph_tla
 from tlc import verify, available, build_spec
 
-app = FastAPI(title="UML2TLA+ Five Diagram Backend", version="4.2.0")
+app = FastAPI(title="UML2TLA+ Five Diagram Backend", version="5.0.0")
 
 app.add_middleware(
     CORSMiddleware,
