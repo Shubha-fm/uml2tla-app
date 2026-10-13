@@ -87,7 +87,7 @@ def analyze(model):
         if any(n.type in ('fork', 'join') for n in nodes):
             warnings.append('Fork/join exports topology only; concurrent token semantics are not implemented.')
     else:
-        warnings.append('TLA+ output for this diagram is a draft skeleton and requires manual semantic review before checking.')
+        warnings.append('Use-case contracts are generated. Click Analyze Model to run TLC.' if model.diagram_type == 'use_case' else 'TLA+ output for this diagram is a draft skeleton and requires manual semantic review before checking.')
         for e in sorted(edges, key=lambda e: getattr(e, 'order', 0)):
             trace.append({'step': len(trace), 'edge_id': e.id, 'source': e.source, 'target': e.target, 'label': e.label, 'action': 'structural_inventory'})
     props.append({'name': 'TemporalSafety', 'status': 'NOT_CHECKED', 'description': 'The safety expression requires a formal checker and explicit semantic mapping.'})
