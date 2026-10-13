@@ -1,0 +1,55 @@
+{
+  "name": "TLCExample",
+  "diagram_type": "state_machine",
+  "verification_variables": {
+    "hazard": false
+  },
+  "verification_safety": "not hazard or pc == \"stop\"",
+  "response_condition": "pc == \"idle\"",
+  "response_target": "stop",
+  "weak_fairness": true,
+  "states": [
+    {
+      "id": "idle",
+      "name": "Idle",
+      "type": "state",
+      "x": 100,
+      "y": 120
+    },
+    {
+      "id": "stop",
+      "name": "EmergencyStop",
+      "type": "state",
+      "x": 400,
+      "y": 120
+    },
+    {
+      "id": "end",
+      "name": "End",
+      "type": "final",
+      "x": 650,
+      "y": 120
+    }
+  ],
+  "transitions": [
+    {
+      "id": "detect",
+      "source": "idle",
+      "target": "stop",
+      "label": "hazard detected",
+      "guard": "not hazard",
+      "updates": {
+        "hazard": true
+      }
+    },
+    {
+      "id": "finish",
+      "source": "stop",
+      "target": "end",
+      "guard": "True",
+      "updates": {
+        "hazard": false
+      }
+    }
+  ]
+}

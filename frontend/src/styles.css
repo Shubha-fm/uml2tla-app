@@ -1361,3 +1361,8 @@ button:disabled { opacity:.45; cursor:not-allowed; }
 .back-row { flex-wrap:wrap; }
 @media(max-width:900px) { .topbar {height:auto;flex-wrap:wrap;padding:12px;} .top-actions {flex-wrap:wrap;} .sidebar {width:190px;min-width:190px;} .convert-layout {display:flex;flex-direction:column;} .code-row {display:flex;flex-direction:column;} }
 @media(max-width:600px) { .body {flex-direction:column;} .sidebar {width:100%;min-width:0;} .side-item {display:inline-flex;width:auto;} .side-title,.project-box {display:none;} .workspace {padding:10px;} .upgrade-status {flex-direction:column;} }
+.tlc-settings {padding:16px; display:grid; gap:12px; margin-bottom:16px;}
+.tlc-settings label {display:flex; flex-direction:column;gap:6px;font-size:13px;}
+.tlc-settings input:not([type=checkbox]),.tlc-settings select {padding:9px;border:1px solid #cbd5e1;border-radius:6px;}
+.tlc-settings input[type=checkbox] {width:auto;align-self:flex-start;}
+.tlc-transition {display:grid;gap:8px;border-top:1px solid #e2e8f0;padding-top:12px;}

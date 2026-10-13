@@ -12,8 +12,9 @@ from fastapi.staticfiles import StaticFiles
 from models import UMLModel, ConversionResponse
 from converter import generate_tla, generate_python
 from analysis import analyze, validate_model, graph_tla
+from tlc import verify, available, build_spec
 
-app = FastAPI(title="UML2TLA+ Five Diagram Backend", version="4.0.0")
+app = FastAPI(title="UML2TLA+ Five Diagram Backend", version="4.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,7 +31,7 @@ ASSETS_DIR = FRONTEND_DIST / "assets"
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "UML2TLA+ five diagram backend", "version": app.version, "analysis": "structural", "tlc_available": False}
+    return {"status": "ok", "service": "UML2TLA+ five diagram backend", "version": app.version, "analysis": "structural", "tlc_available": available()}
 
 
 @app.post("/api/convert", response_model=ConversionResponse)
@@ -56,6 +57,11 @@ def convert(model: UMLModel):
     )
 
 
+@app.post("/api/verify")
+def verify_endpoint(model: UMLModel):
+    return verify(model)
+
+
 @app.post("/api/export")
 def export_project(model: UMLModel):
     result = convert(model)
@@ -69,7 +75,12 @@ def export_project(model: UMLModel):
         archive.writestr("traceability.json", json.dumps(result.traceability, indent=2))
         if result.cfg:
             archive.writestr(result.module_name + ".cfg", result.cfg)
-        archive.writestr("README.txt", "UML2TLA+ v4 project export\n\nAnalysis is structural only. TLC has not been run.\nRead analysis.json for warnings and scope.\nGraph modules ignore guard labels and concurrency.\nPython is a prototype, not proved equivalent to TLA+.\nOther diagram TLA+ outputs are draft skeletons.\n")
+        if model.diagram_type == "state_machine" and (model.verification_safety.strip() or model.response_condition.strip()):
+            behavior, behavior_cfg, behavior_mapping, behavior_module, _ = build_spec(model)
+            archive.writestr(behavior_module + ".tla", behavior)
+            archive.writestr(behavior_module + ".cfg", behavior_cfg)
+            archive.writestr("behavior_traceability.json", json.dumps(behavior_mapping, indent=2))
+        archive.writestr("README.txt", "UML2TLA+ v4.1 project export\n\nAnalysis is structural only. This export does not run TLC. Behavior files can be checked with TLC.\nRead analysis.json for warnings and scope.\nGraph modules ignore guard labels and concurrency.\nPython is a prototype, not proved equivalent to TLA+.\nOther diagram TLA+ outputs are draft skeletons.\n")
     return Response(buffer.getvalue(), media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{stem}_project.zip"'})
 
 
