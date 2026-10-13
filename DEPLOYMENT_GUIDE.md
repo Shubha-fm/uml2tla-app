@@ -12,7 +12,7 @@ This package is ready for a single public URL deployment. The React frontend cal
    Build command:
 
    ```bash
-   cd frontend && npm install && npm run build
+   cd frontend && npm ci && npm run build
    cd ../backend && pip install -r requirements.txt
    ```
 
@@ -46,7 +46,7 @@ Terminal 2:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
@@ -58,6 +58,6 @@ http://localhost:8080
 
 ## Notes
 
-- The app currently uses a lightweight built-in verification function.
-- For real TLC verification, connect `verify_model()` in `backend/converter.py` to a TLC subprocess.
+- The app reports structural graph diagnostics. TLC is not bundled or invoked.
+- Temporal safety, guards, fairness and concurrency require an explicit formal model and an external checker.
 - The public link will work as long as the hosting service keeps the web service active.

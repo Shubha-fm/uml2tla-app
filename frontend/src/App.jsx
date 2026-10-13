@@ -114,13 +114,13 @@ function copy(text) {
 }
 function downloadText(filename, text) { const blob = new Blob([text], {type:"text/plain"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 
-function Header({ model, onVerify, onImport, onDownloadAll }) {
+function Header({ model, onVerify, onImport, onDownloadAll, busy }) {
   return <header className="topbar">
     <div className="brand"><div className="logo"><GitBranch size={18}/></div><b>UML2TLA+</b></div>
     <div className="project">Project:&nbsp;<span>{model.name}</span><ChevronDown size={15}/></div>
     <div className="top-actions">
-      <button onClick={onVerify}><Play size={17} fill="white"/> Analyze Model</button>
-      <button onClick={onVerify}><Code2 size={17}/> Generate Code</button>
+      <button disabled={busy} onClick={onVerify}><Play size={17} fill="white"/> Analyze Model</button>
+      <button disabled={busy} onClick={onVerify}><Code2 size={17}/> Generate Code</button>
       <button onClick={onImport}><Upload size={17}/> Import</button>
       <button onClick={onDownloadAll}><Download size={17}/> Download</button>
       <Settings size={23} className="gear"/>
@@ -139,7 +139,7 @@ function Sidebar({ active, setActive, model, loadTemplate }) {
     <SidebarItem icon={<FileCode size={20}/>} label="TLA+ Specification" active={active==="tla"} onClick={()=>setActive("tla")}/>
     <SidebarItem icon={<CheckSquare size={20}/>} label="Model Analysis" active={active==="checking"} onClick={()=>setActive("checking")}/>
     <SidebarItem icon={<Code2 size={20}/>} label="Python Code" active={active==="python"} onClick={()=>setActive("python")}/>
-    <SidebarItem icon={<Route size={20}/>} label="Execution Trace" active={active==="trace"} onClick={()=>setActive("trace")}/>
+    <SidebarItem icon={<Route size={20}/>} label="Graph Trace" active={active==="trace"} onClick={()=>setActive("trace")}/>
     <SidebarItem icon={<Settings size={20}/>} label="Project Settings" active={active==="settings"} onClick={()=>setActive("settings")}/>
 
     <div className="side-title">DIAGRAMS</div>
@@ -1096,10 +1096,10 @@ function Info({label,value,good}) { return <div className="info"><span>{label}</
 function TraceTable({trace}) {
   const rows = trace || [];
   return (
-    <Panel title="Execution Trace" actions={<span className="trace-action-label">Trace</span>}>
+    <Panel title="Graph Trace" actions={<span className="trace-action-label">Trace</span>}>
       <div className="trace-scroll">
         {rows.length === 0 ? (
-          <div className="trace-empty">Click Generate TLA+ and Python to see the complete execution trace.</div>
+          <div className="trace-empty">Click Generate TLA+ and Python to see the graph discovery trace.</div>
         ) : (
           <table className="trace-table full-trace-table">
             <thead>
@@ -1108,17 +1108,17 @@ function TraceTable({trace}) {
                 <th>State / Mode</th>
                 <th>Event / Action</th>
                 <th>Details</th>
-                <th>Safe</th>
+                <th>Safety Check</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i}>
                   <td>{r.step ?? i}</td>
-                  <td>{r.mode ?? r.pc ?? r.class ?? "-"}</td>
+                  <td>{r.node ?? r.mode ?? r.pc ?? r.class ?? r.source ?? "-"}</td>
                   <td>{r.event ?? r.action ?? r.message ?? r.flow ?? "-"}</td>
                   <td><code>{JSON.stringify(r)}</code></td>
-                  <td>{String(r.safe ?? true)}</td>
+                  <td>{r.safe === undefined ? "Not checked" : String(r.safe)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1135,7 +1135,7 @@ function SettingsPanel({model,setModel}) {
 
 function Dashboard({model,data}) {
   const count = model.states.length + model.actors.length + model.use_cases.length + model.classes.length + model.lifelines.length + model.actions.length;
-  return <Panel title="Dashboard"><div className="dashboard"><div className="card"><b>{model.diagram_type}</b><span>Diagram</span></div><div className="card"><b>{count}</b><span>Elements</span></div><div className="card"><b>{data?.statistics?.result||"Not checked"}</b><span>Verification</span></div><div className="card"><b>{data?.trace?.length||0}</b><span>Trace Steps</span></div></div><div className="about"><h3>{model.name}</h3><p>{model.description}</p><p><b>Safety property:</b> {model.safety_property}</p></div></Panel>
+  return <Panel title="Dashboard"><div className="dashboard"><div className="card"><b>{model.diagram_type}</b><span>Diagram</span></div><div className="card"><b>{count}</b><span>Elements</span></div><div className="card"><b>{data?.statistics?.result||"Not checked"}</b><span>Structural Analysis</span></div><div className="card"><b>{data?.trace?.length||0}</b><span>Trace Steps</span></div></div><div className="about"><h3>{model.name}</h3><p>{model.description}</p><p><b>Safety property:</b> {model.safety_property}</p></div></Panel>
 }
 
 
@@ -1276,6 +1276,18 @@ function App(){
     finally {clearTimeout(timeout);inFlight.current=false;setBusy(false);}
   }
   function downloadAll(){ downloadText(`${model.name}_project.json`, JSON.stringify({schema_version:2,model,...(data||{})},null,2)); }
+  async function downloadArchive() {
+    if(inFlight.current)return;
+    inFlight.current=true;setBusy(true);setError("");
+    const controller=new AbortController(), timeout=setTimeout(()=>controller.abort(),30000);
+    try {
+      const res=await fetch("/api/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(model),signal:controller.signal});
+      if(!res.ok){const json=await res.json();throw new Error(typeof json.detail === "string" ? json.detail : JSON.stringify(json.detail));}
+      const url=URL.createObjectURL(await res.blob()), link=document.createElement("a");
+      link.href=url;link.download=`${model.name}_project.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    } catch(e){setError(e.name==="AbortError"?"Export timed out. Please retry.":e.message);}
+    finally{clearTimeout(timeout);inFlight.current=false;setBusy(false);}
+  }
   function importProject(e){
     const f=e.target.files[0]; e.target.value="";if(!f)return;
     if(f.size>2*1024*1024){setError("Project files must be smaller than 2 MB.");return;}
@@ -1303,7 +1315,7 @@ function App(){
         />
       ) : (
         <>
-          <Header model={model} onVerify={convert} onImport={() => fileInput.current.click()} onDownloadAll={downloadAll}/>
+          <Header model={model} onVerify={convert} onImport={() => fileInput.current.click()} onDownloadAll={downloadAll} busy={busy}/>
           <input ref={fileInput} type="file" accept="application/json" hidden onChange={importProject}/>
           <div className="body">
             <Sidebar active={active} setActive={setActive} model={model} loadTemplate={loadTemplate}/>
@@ -1311,12 +1323,13 @@ function App(){
               <div className="upgrade-status" role="status"><span>{busy ? "Analyzing model…" : saveStatus}</span><span>v4 · Structural analysis</span></div>
               {error && <div className="upgrade-error" role="alert">{error}</div>}
               <div className="back-row">
+                <button className="mini" disabled={busy} onClick={downloadArchive}>Download complete ZIP</button>
                 <button className="mini" disabled={!past.current.length} onClick={undo}>Undo</button>
                 <button className="mini" disabled={!future.current.length} onClick={redo}>Redo</button>
                 {data?.cfg && <button className="mini" onClick={()=>downloadText(`${data.module_name}.cfg`,data.cfg)}>Download TLC config</button>}
                 {data?.traceability?.length>0 && <button className="mini" onClick={()=>downloadText(`${model.name}_traceability.json`,JSON.stringify(data.traceability,null,2))}>Export traceability</button>}
                 <button className="mini" onClick={() => setPage("home")}>← First Page</button>
-                <button className="mini primary-mini" onClick={convert}>Generate TLA+ and Python</button>
+                <button className="mini primary-mini" disabled={busy} onClick={convert}>Generate TLA+ and Python</button>
               </div>
               {active === "editor" ? (
                 <div className="convert-layout">

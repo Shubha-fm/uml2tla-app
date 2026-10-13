@@ -65,6 +65,7 @@ This package has been updated for deployment as a single public web app. See `DE
 - State-machine and activity exports now use a finite topology abstraction, with unique edge operators, string node IDs, a matching `.cfg`, and traceability JSON. Download the `.tla` using its module filename and the matching config.
 - Safe project import, recoverable local saving, undo/redo (Ctrl/Cmd+Z and Shift+Z), conversion timeout, server error reporting, and stale result protection.
 - Development API proxy, mobile layout improvements, path containment for static files, and CI checks.
+- Complete project ZIP download with source model, generated code, analysis report, config and traceability.
 
 ### Interpretation of results
 
