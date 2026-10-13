@@ -112,13 +112,14 @@ def parse_output(output, code, timed_out=False):
     elif re.search(r'Invariant .+ is violated|Temporal properties were violated|Deadlock reached', output): status = 'VIOLATED'
     elif code == 0 and 'Model checking completed. No error has been found.' in output: status = 'PASSED'
     else: status = 'ERROR'
-    counts = re.search(r'([\d,]+) states generated, ([\d,]+) distinct states found, ([\d,]+) states left on queue', output)
+    all_counts = re.findall(r'([\d,]+) states generated, ([\d,]+) distinct states found, ([\d,]+) states left on queue', output)
+    counts = all_counts[-1] if all_counts else None
     stats = {'result': status, 'complete': status == 'PASSED', 'engine': 'TLC'}
     if counts:
-        stats.update(states_generated=int(counts[1].replace(',', '')), distinct_states=int(counts[2].replace(',', '')), states_left=int(counts[3].replace(',', '')))
+        stats.update(states_generated=int(counts[0].replace(',', '')), distinct_states=int(counts[1].replace(',', '')), states_left=int(counts[2].replace(',', '')))
     trace = []
     for match in re.finditer(r'^State (\d+): ([^\n]*)\n(.*?)(?=^State \d+:|^\d[\d,]* states generated|^Finished|\Z)', output, re.M | re.S):
-        assignments = dict(re.findall(r'^/\\ (\w+) = ([^\n]+)', match[3], re.M))
+        assignments = dict(re.findall(r'^(?:/\\ )?(\w+) = ([^\n]+)', match[3], re.M))
         trace.append({'step': int(match[1]), 'action': match[2], 'values': assignments})
     return status, stats, trace
 

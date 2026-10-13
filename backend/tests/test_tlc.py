@@ -24,6 +24,12 @@ class TLCUnitTests(unittest.TestCase):
     def test_timeout_never_passes(self):
         status,stats,_=parse_output('Model checking completed. No error has been found.',0,True)
         self.assertEqual(status,'INCOMPLETE');self.assertFalse(stats['complete'])
+    def test_final_counts_and_single_variable_trace(self):
+        log='Progress: 3 states generated, 2 distinct states found, 1 states left on queue.\nState 1: Init\npc = "a"\nState 2: Step\npc = "b"\n9 states generated, 4 distinct states found, 0 states left on queue.\n'
+        _, stats, trace=parse_output(log,1)
+        self.assertEqual(stats['states_generated'],9)
+        self.assertEqual(stats['distinct_states'],4)
+        self.assertEqual(trace[1]['values']['pc'],'"b"')
     def test_error_never_passes(self):
         self.assertEqual(parse_output('Parsing failed',1)[0],'ERROR')
     def test_missing_tlc(self):

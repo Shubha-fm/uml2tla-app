@@ -3,6 +3,7 @@ import json
 import time
 from urllib.request import Request, urlopen
 from urllib.error import URLError
+from http.client import RemoteDisconnected
 
 url = 'http://127.0.0.1:8000'
 for attempt in range(60):
@@ -10,7 +11,7 @@ for attempt in range(60):
         with urlopen(url + '/api/health', timeout=2) as response:
             health = json.load(response)
         break
-    except URLError:
+    except (URLError, OSError, RemoteDisconnected):
         time.sleep(0.5)
 else:
     raise RuntimeError('Container did not become healthy')
