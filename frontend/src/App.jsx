@@ -112,14 +112,14 @@ function copy(text) {
     alert("Copied successfully.");
   }
 }
-function downloadText(filename, text) { const blob = new Blob([text], {type:"text/plain"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); }
+function downloadText(filename, text) { const blob = new Blob([text], {type:"text/plain"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 
 function Header({ model, onVerify, onImport, onDownloadAll }) {
   return <header className="topbar">
     <div className="brand"><div className="logo"><GitBranch size={18}/></div><b>UML2TLA+</b></div>
     <div className="project">Project:&nbsp;<span>{model.name}</span><ChevronDown size={15}/></div>
     <div className="top-actions">
-      <button onClick={onVerify}><Play size={17} fill="white"/> Verify Model</button>
+      <button onClick={onVerify}><Play size={17} fill="white"/> Analyze Model</button>
       <button onClick={onVerify}><Code2 size={17}/> Generate Code</button>
       <button onClick={onImport}><Upload size={17}/> Import</button>
       <button onClick={onDownloadAll}><Download size={17}/> Download</button>
@@ -137,7 +137,7 @@ function Sidebar({ active, setActive, model, loadTemplate }) {
     <SidebarItem icon={<Home size={20}/>} label="Dashboard" active={active==="dashboard"} onClick={()=>setActive("dashboard")}/>
     <SidebarItem icon={<GitBranch size={20}/>} label="UML Editor" active={active==="editor"} onClick={()=>setActive("editor")}/>
     <SidebarItem icon={<FileCode size={20}/>} label="TLA+ Specification" active={active==="tla"} onClick={()=>setActive("tla")}/>
-    <SidebarItem icon={<CheckSquare size={20}/>} label="Model Checking" active={active==="checking"} onClick={()=>setActive("checking")}/>
+    <SidebarItem icon={<CheckSquare size={20}/>} label="Model Analysis" active={active==="checking"} onClick={()=>setActive("checking")}/>
     <SidebarItem icon={<Code2 size={20}/>} label="Python Code" active={active==="python"} onClick={()=>setActive("python")}/>
     <SidebarItem icon={<Route size={20}/>} label="Execution Trace" active={active==="trace"} onClick={()=>setActive("trace")}/>
     <SidebarItem icon={<Settings size={20}/>} label="Project Settings" active={active==="settings"} onClick={()=>setActive("settings")}/>
@@ -1087,7 +1087,7 @@ function CodeBlock({code}) {
 
 function ResultPanel({data}) {
   const stats=data?.statistics||{};
-  return <Panel title="Model Checking"><div className={`result-box ${data?.safety_satisfied===false?"fail":""}`}><CheckSquare size={28}/><div><h3>Model Checking Result</h3><p>{data?.result||"Click Verify Model to check the specification."}</p></div></div><h4>Statistics</h4><Info label="States Explored" value={stats.states_explored??"-"}/><Info label="Distinct States" value={stats.distinct_states??"-"}/><Info label="Transitions" value={stats.transitions??"-"}/><Info label="Time Taken" value={stats.time_taken??"-"}/><Info label="Result" value={stats.result??"-"} good={stats.result==="PASSED"}/><h4>Properties</h4>{(data?.properties||[]).map(p=><Info key={p.name} label={p.name} value={p.status} good={p.status==="PASSED"}/>)}{data?.warnings?.length>0&&<ul className="warnings">{data.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul>}</Panel>
+  return <Panel title="Structural Analysis"><div className={`result-box ${data?.safety_satisfied===false?"fail":""}`}><CheckSquare size={28}/><div><h3>Structural Analysis Result</h3><p>{data?.result||"Click Analyze Model to check the specification."}</p></div></div><h4>Statistics</h4><Info label="Reachable Graph Nodes" value={stats.states_explored??"-"}/><Info label="Distinct Graph Nodes" value={stats.distinct_states??"-"}/><Info label="Transitions" value={stats.transitions??"-"}/><Info label="Time Taken" value={stats.time_taken??"-"}/><Info label="Result" value={stats.result??"-"} good={stats.result==="PASSED"}/><h4>Properties</h4>{(data?.properties||[]).map(p=><Info key={p.name} label={p.name} value={p.status} good={p.status==="PASSED"}/>)}{data?.warnings?.length>0&&<ul className="warnings">{data.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul>}</Panel>
 }
 
 function Info({label,value,good}) { return <div className="info"><span>{label}</span><b className={good?"good":""}>{value}</b></div> }
@@ -1220,30 +1220,72 @@ function FirstPage({ model, setModel, loadTemplate, startConverter }) {
   );
 }
 
+const PROJECT_KEY = "uml2tla_five_project";
+const collections = ["states", "transitions", "actors", "use_cases", "associations", "classes", "relationships", "lifelines", "messages", "actions", "flows"];
+function normalizeProject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !templates[value.diagram_type]) throw new Error("Choose a supported diagram type.");
+  if (typeof value.name !== "string" || !value.name.trim()) throw new Error("Project name is required.");
+  const result = {...structuredClone(templates[value.diagram_type]), ...value};
+  for (const key of collections) {
+    if (value[key] !== undefined && !Array.isArray(value[key])) throw new Error(`${key} must be an array.`);
+    result[key] = (value[key] || []).map(item => {
+      const nodes = ["states", "actors", "use_cases", "classes", "lifelines", "actions"].includes(key);
+      if (!item || typeof item !== "object") throw new Error(`Invalid item in ${key}.`);
+      if (nodes && (typeof item.name !== "string" || !item.name.trim())) throw new Error(`A name is required in ${key}.`);
+      if (!nodes && (typeof item.source !== "string" || typeof item.target !== "string")) throw new Error(`Endpoints are required in ${key}.`);
+      if (key === "classes" && ["attributes", "methods"].some(k => item[k] !== undefined && (!Array.isArray(item[k]) || item[k].some(v => typeof v !== "string")))) throw new Error("Class attributes and methods must be text arrays.");
+      if (nodes && ["x", "y"].some(k => item[k] !== undefined && !Number.isFinite(item[k]))) throw new Error("Coordinates must be finite numbers.");
+      if (item.label !== undefined && typeof item.label !== "string") throw new Error("Labels must be text.");
+      if (key === "messages" && item.order !== undefined && (!Number.isInteger(item.order) || item.order < 0)) throw new Error("Message order must be a nonnegative integer.");
+      return nodes ? {x:0,y:0,type:key === "states" ? "state" : "action",attributes:[],methods:[],...item} : {label:"",order:0,...item};
+    });
+    if (result[key].some(item => !item || typeof item.id !== "string" || ("source" in item ? typeof item.source !== "string" || typeof item.target !== "string" : typeof item.name !== "string"))) throw new Error(`Invalid item in ${key}.`);
+  }
+  return result;
+}
 function App(){
-  const [model,setModel]=useState(()=>{const saved=localStorage.getItem("uml2tla_five_project");return saved?JSON.parse(saved):templates.state_machine});
+  const [model,replaceModel]=useState(()=>{try { const saved=localStorage.getItem(PROJECT_KEY); return saved?normalizeProject(JSON.parse(saved)):structuredClone(templates.state_machine); } catch { return structuredClone(templates.state_machine); }});
   const [active,setActive]=useState("editor");
   const [page,setPage]=useState("home");
   const [data,setData]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  const [saveStatus,setSaveStatus]=useState("Saved locally");
+  const past=useRef([]), future=useRef([]), revision=useRef(0), inFlight=useRef(false);
   const fileInput=useRef(null);
-  useEffect(()=>localStorage.setItem("uml2tla_five_project",JSON.stringify(model)),[model]);
-
-  function loadTemplate(kind){ setModel(JSON.parse(JSON.stringify(templates[kind]))); setActive("editor"); setData(null); }
-
-  async function convert(){
-    try{
-      const res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(model)});
-      const json=await res.json();
-      setData(json);
-    }catch(e){ alert("Conversion failed. Please check the server logs and try again."); }
+  function setModel(value) {
+    past.current=[...past.current.slice(-49),model]; future.current=[];
+    revision.current++; replaceModel(typeof value === "function" ? value(model) : value); setData(null); setError("");
   }
-
-  function downloadAll(){ downloadText(`${model.name}_project.json`, JSON.stringify({model,tla:data?.tla||"",python_code:data?.python_code||"",trace:data?.trace||[]},null,2)); }
-  function importProject(e){ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{try{const parsed=JSON.parse(r.result);setModel(parsed.model||parsed);setData(null)}catch{alert("Invalid JSON")}}; r.readAsText(f); }
+  function undo(){ if(!past.current.length)return; future.current.push(model); const old=past.current.pop(); revision.current++; replaceModel(old); setData(null); }
+  function redo(){ if(!future.current.length)return; past.current.push(model); const next=future.current.pop(); revision.current++; replaceModel(next); setData(null); }
+  useEffect(()=>{try {localStorage.setItem(PROJECT_KEY,JSON.stringify(model)); setSaveStatus("Saved locally");} catch {setSaveStatus("Local save unavailable. Download your project.");}},[model]);
+  useEffect(()=>{function key(e){if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)||e.target.isContentEditable)return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo();}}window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key);},[model]);
+  function loadTemplate(kind){ setModel(structuredClone(templates[kind])); setActive("editor"); }
+  async function convert(){
+    if(inFlight.current)return;
+    inFlight.current=true;setBusy(true);setError("");
+    const version=revision.current, controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),30000);
+    try {
+      const res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(model),signal:controller.signal});
+      const json=await res.json();
+      if(!res.ok) throw new Error(typeof json.detail === "string" ? json.detail : JSON.stringify(json.detail || "Conversion failed"));
+      if(version===revision.current)setData(json);
+    } catch(e) { if(version===revision.current)setError(e.name==="AbortError"?"Conversion timed out. Please retry.":e.message); }
+    finally {clearTimeout(timeout);inFlight.current=false;setBusy(false);}
+  }
+  function downloadAll(){ downloadText(`${model.name}_project.json`, JSON.stringify({schema_version:2,model,...(data||{})},null,2)); }
+  function importProject(e){
+    const f=e.target.files[0]; e.target.value="";if(!f)return;
+    if(f.size>2*1024*1024){setError("Project files must be smaller than 2 MB.");return;}
+    const r=new FileReader();r.onerror=()=>setError("Could not read this file.");
+    r.onload=()=>{try {const parsed=JSON.parse(r.result);setModel(normalizeProject(parsed.model||parsed));}catch(err){setError(`Import failed: ${err.message}`);}};r.readAsText(f);
+  }
 
   let content;
   if(active==="dashboard") content=<Dashboard model={model} data={data}/>;
-  else if(active==="tla") content=<Panel title="TLA+ Specification" actions={<><button className="mini" onClick={()=>copy(data?.tla||"")}><Copy size={15}/>Copy</button><button className="mini" onClick={()=>downloadText(`${model.name}.tla`,data?.tla||"")}><Download size={15}/>.tla</button></>}><CodeBlock code={data?.tla||"Click Generate Code to create TLA+."}/></Panel>;
+  else if(active==="tla") content=<Panel title="TLA+ Specification" actions={<><button className="mini" onClick={()=>copy(data?.tla||"")}><Copy size={15}/>Copy</button><button className="mini" onClick={()=>downloadText(`${data?.module_name || model.name}.tla`,data?.tla||"")}><Download size={15}/>.tla</button></>}><CodeBlock code={data?.tla||"Click Generate Code to create TLA+."}/></Panel>;
   else if(active==="checking") content=<ResultPanel data={data}/>;
   else if(active==="python") content=<Panel title="Python Code" actions={<><button className="mini" onClick={()=>copy(data?.python_code||"")}><Copy size={15}/>Copy</button><button className="mini" onClick={()=>downloadText(`${model.name}.py`,data?.python_code||"")}><Download size={15}/>.py</button></>}><CodeBlock code={data?.python_code||"Click Generate Code to create Python."}/></Panel>;
   else if(active==="trace") content=<TraceTable trace={data?.trace}/>;
@@ -1266,7 +1308,13 @@ function App(){
           <div className="body">
             <Sidebar active={active} setActive={setActive} model={model} loadTemplate={loadTemplate}/>
             <main className="workspace">
+              <div className="upgrade-status" role="status"><span>{busy ? "Analyzing model…" : saveStatus}</span><span>v4 · Structural analysis</span></div>
+              {error && <div className="upgrade-error" role="alert">{error}</div>}
               <div className="back-row">
+                <button className="mini" disabled={!past.current.length} onClick={undo}>Undo</button>
+                <button className="mini" disabled={!future.current.length} onClick={redo}>Redo</button>
+                {data?.cfg && <button className="mini" onClick={()=>downloadText(`${data.module_name}.cfg`,data.cfg)}>Download TLC config</button>}
+                {data?.traceability?.length>0 && <button className="mini" onClick={()=>downloadText(`${model.name}_traceability.json`,JSON.stringify(data.traceability,null,2))}>Export traceability</button>}
                 <button className="mini" onClick={() => setPage("home")}>← First Page</button>
                 <button className="mini primary-mini" onClick={convert}>Generate TLA+ and Python</button>
               </div>
@@ -1289,7 +1337,7 @@ function App(){
                     <Panel title="TLA+ Specification" actions={
                       <>
                         <button className="mini" onClick={() => copy(data?.tla || "")}><Copy size={15}/> Copy</button>
-                        <button className="mini" onClick={() => downloadText(`${model.name}.tla`, data?.tla || "")}><Download size={15}/> .tla</button>
+                        <button className="mini" onClick={() => downloadText(`${data?.module_name || model.name}.tla`, data?.tla || "")}><Download size={15}/> .tla</button>
                       </>
                     }>
                       <CodeBlock code={data?.tla || "Click Generate TLA+ and Python."}/>

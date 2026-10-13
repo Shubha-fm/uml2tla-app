@@ -1354,3 +1354,10 @@ body,
     opacity: 0.92;
   }
 }
+
+.upgrade-status { display:flex; justify-content:space-between; gap:16px; padding:12px 16px; background:#eef5ff; border:1px solid #c5d9f4; border-radius:8px; color:#244c79; margin-bottom:12px; font-size:13px; }
+.upgrade-error { padding:14px; background:#fff0f0; border:1px solid #ecaaaa; color:#912828; border-radius:8px; margin-bottom:12px; overflow-wrap:anywhere; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.back-row { flex-wrap:wrap; }
+@media(max-width:900px) { .topbar {height:auto;flex-wrap:wrap;padding:12px;} .top-actions {flex-wrap:wrap;} .sidebar {width:190px;min-width:190px;} .convert-layout {display:flex;flex-direction:column;} .code-row {display:flex;flex-direction:column;} }
+@media(max-width:600px) { .body {flex-direction:column;} .sidebar {width:100%;min-width:0;} .side-item {display:inline-flex;width:auto;} .side-title,.project-box {display:none;} .workspace {padding:10px;} .upgrade-status {flex-direction:column;} }
