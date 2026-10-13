@@ -136,3 +136,13 @@ The finite model tracks sets of requested and completed actor/use-case pairs. Ea
 Optionally check eventual completion of every requested pair. Weak fairness applies to completion actions only and is explicitly selectable. Without fairness, infinite stuttering can violate eventual completion. No fairness is imposed on issuing new requests. Completed models admit terminal stuttering.
 
 Limits: 10 distinct associations, 20 actors and 20 use cases. Labels are annotations; this abstraction does not establish actual authentication, credentials, implementation access control or generated Python equivalence. Class, sequence and activity diagrams remain structural. The checked use-case specification and matching config are included in project exports. Exporting does not invoke TLC.
+
+## Workspace 5.0 interface
+
+The interface now uses a spacious project home and a responsive model workspace. Resume an existing project, create one from a diagram card, or import a saved project.
+
+The editor separates Diagram, Contracts, Generated files and Trace explorer tabs. The diagram canvas supports zoom and fit-to-content, with properties available on demand. Dragging respects SVG coordinates at any zoom level and forms one undo step. Verification results distinguish passed, violated, incomplete, error, structural and not-run states; scope information and checker logs remain accessible in expandable panels.
+
+Diagram drafts are preserved when switching and saved locally in the browser. Save project downloads a JSON containing all diagram drafts; Export ZIP packages the current diagram. Creating a new project resets the draft collection. Use the mobile menu for navigation on narrow screens. Existing v4 project JSON imports remain supported.
+
+Browser regression tests exercise the real TLC workflow, generated files, mobile navigation, zoomed dragging, undo/redo and draft preservation. After building the frontend and installing Java/TLC, run `npm run test:ui` from `frontend` (install Playwright Chromium with `npx playwright install chromium` first).

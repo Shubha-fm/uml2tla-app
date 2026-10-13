@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Home, GitBranch, FileCode, CheckSquare, Code2, Route, Settings, Download, Play, Copy, MoreVertical, Trash2, Circle, Square, MousePointer2, ChevronDown, Upload, Link, Pencil, X, Plus } from "lucide-react";
+import { Home, GitBranch, FileCode, CheckSquare, Code2, Route, Settings, Download, Play, Copy, MoreVertical, Trash2, Circle, Square, MousePointer2, ChevronDown, Upload, Link, Pencil, X, Plus, Menu, ShieldCheck, ArrowRight, ArrowLeft, Undo2, Redo2, ZoomIn, ZoomOut, Maximize, Layers, SlidersHorizontal, Sparkles, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import "./styles.css";
 
 const API_URL = "/api/convert";
@@ -119,47 +119,35 @@ function copy(text) {
 }
 function downloadText(filename, text) { const blob = new Blob([text], {type:"text/plain"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 
-function Header({ model, onVerify, onGenerate, onImport, onDownloadAll, busy }) {
+const diagramNames = {state_machine:"State machine", use_case:"Use case", class:"Class diagram", sequence:"Sequence", activity:"Activity"};
+function Header({model,onVerify,onGenerate,onImport,onDownloadAll,busy,onHome,onNavToggle,onSettings}) {
+  const supported=["state_machine","use_case"].includes(model.diagram_type);
   return <header className="topbar">
-    <div className="brand"><div className="logo"><GitBranch size={18}/></div><b>UML2TLA+</b></div>
-    <div className="project">Project:&nbsp;<span>{model.name}</span><ChevronDown size={15}/></div>
+    <button className="icon-button mobile-menu" onClick={onNavToggle} aria-label="Toggle navigation"><Menu size={20}/></button>
+    <button className="brand" onClick={onHome}><span className="logo"><GitBranch size={21}/></span><span><b>UML2TLA+</b><small>MODEL WORKSPACE</small></span></button>
+    <div className="project"><span>Workspace</span><span className="breadcrumb-separator">/</span><b>{model.name}</b></div>
     <div className="top-actions">
-      <button disabled={busy} onClick={onVerify}><Play size={17} fill="white"/> Analyze Model</button>
-      <button disabled={busy} onClick={onGenerate}><Code2 size={17}/> Generate Code</button>
-      <button onClick={onImport}><Upload size={17}/> Import</button>
-      <button onClick={onDownloadAll}><Download size={17}/> Download</button>
-      <Settings size={23} className="gear"/>
+      <button className="quiet-button" onClick={onImport}><Upload size={16}/><span>Import</span></button>
+      <button className="quiet-button" onClick={onDownloadAll}><Download size={16}/><span>Save project</span></button>
+      <button className="icon-button" onClick={onSettings} aria-label="Project settings"><Settings size={18}/></button>
+      <button className="primary-button" aria-label={supported?"Verify model":"Analyze diagram"} disabled={busy} onClick={onVerify}>{busy?<Loader2 size={17} className="spin"/>:<ShieldCheck size={17}/>}<span>{busy?"Working…":supported?"Verify model":"Analyze diagram"}</span></button>
     </div>
-  </header>
+  </header>;
 }
-
-function SidebarItem({ icon, label, active, onClick }) {
-  return <button className={`side-item ${active ? "active" : ""}`} onClick={onClick}>{icon}<span>{label}</span></button>;
+function SidebarItem({icon,label,active,onClick}) {
+  return <button className={`side-item ${active?"active":""}`} onClick={onClick} aria-current={active?"page":undefined}>{icon}<span>{label}</span>{active&&<span className="nav-dot"/>}</button>;
 }
-
-function Sidebar({ active, setActive, model, loadTemplate }) {
-  return <aside className="sidebar">
-    <SidebarItem icon={<Home size={20}/>} label="Dashboard" active={active==="dashboard"} onClick={()=>setActive("dashboard")}/>
-    <SidebarItem icon={<GitBranch size={20}/>} label="UML Editor" active={active==="editor"} onClick={()=>setActive("editor")}/>
-    <SidebarItem icon={<FileCode size={20}/>} label="TLA+ Specification" active={active==="tla"} onClick={()=>setActive("tla")}/>
-    <SidebarItem icon={<CheckSquare size={20}/>} label="Model Analysis" active={active==="checking"} onClick={()=>setActive("checking")}/>
-    <SidebarItem icon={<Code2 size={20}/>} label="Python Code" active={active==="python"} onClick={()=>setActive("python")}/>
-    <SidebarItem icon={<Route size={20}/>} label="Graph Trace" active={active==="trace"} onClick={()=>setActive("trace")}/>
-    <SidebarItem icon={<Settings size={20}/>} label="Project Settings" active={active==="settings"} onClick={()=>setActive("settings")}/>
-
-    <div className="side-title">DIAGRAMS</div>
-    <SidebarItem icon={<Circle size={18}/>} label="Use Case Diagram" active={model.diagram_type==="use_case"} onClick={()=>loadTemplate("use_case")}/>
-    <SidebarItem icon={<Square size={18}/>} label="Class Diagram" active={model.diagram_type==="class"} onClick={()=>loadTemplate("class")}/>
-    <SidebarItem icon={<GitBranch size={18}/>} label="Sequence Diagram" active={model.diagram_type==="sequence"} onClick={()=>loadTemplate("sequence")}/>
-    <SidebarItem icon={<Route size={18}/>} label="Activity Diagram" active={model.diagram_type==="activity"} onClick={()=>loadTemplate("activity")}/>
-    <SidebarItem icon={<GitBranch size={18}/>} label="State Machine Diagram" active={model.diagram_type==="state_machine"} onClick={()=>loadTemplate("state_machine")}/>
-
-    <div className="project-box"><b>PROJECT</b><p>Name: {model.name}</p><p>Diagram: {model.diagram_type}</p><p>Ready for conversion</p></div>
-  </aside>
+function Sidebar({active,setActive,model,loadTemplate,onHome}) {
+  return <aside className="sidebar"><div className="side-title">WORKSPACE</div>
+    {[['editor','Model editor',<GitBranch size={18}/>],['checking','Verification',<ShieldCheck size={18}/>],['tla','TLA+ specification',<FileCode size={18}/>],['python','Python code',<Code2 size={18}/>],['trace','Trace explorer',<Route size={18}/>],['settings','Project settings',<Settings size={18}/>]].map(([key,label,icon])=><SidebarItem key={key} icon={icon} label={label} active={active===key} onClick={()=>setActive(key)}/>)}
+    <div className="side-title">DIAGRAM LIBRARY</div>
+    {Object.entries(diagramNames).map(([kind,name])=><SidebarItem key={kind} icon={kind==='use_case'?<Circle size={17}/>:kind==='class'?<Square size={17}/>:<GitBranch size={17}/>} label={name} active={model.diagram_type===kind} onClick={()=>loadTemplate(kind)}/>)}
+    <div className="sidebar-bottom"><div className="project-box"><span className="eyebrow">CURRENT PROJECT</span><b>{model.name}</b><span>{diagramNames[model.diagram_type]}</span></div><button className="quiet-button" onClick={onHome}><Plus size={16}/> Project home</button><span className="sidebar-version">Workspace 5.0</span></div>
+  </aside>;
 }
 
 function Panel({ title, children, actions }) {
-  return <section className="panel"><div className="panel-head"><b>{title}</b><div className="panel-icons">{actions || <><Copy size={17}/><MoreVertical size={17}/></>}</div></div>{children}</section>
+  return <section className="panel"><div className="panel-head"><b>{title}</b><div className="panel-icons">{actions}</div></div>{children}</section>
 }
 
 
@@ -306,23 +294,20 @@ function RenderDiagram({ model, setModel }) {
   return <StateMachineView model={model} setModel={setModel}/>;
 }
 
-function SvgBase({ children, onMove, onUp, onBackground }) {
-  return (
-    <div className="svg-stage" onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}>
-      <svg width="100%" height="100%" viewBox="0 0 900 560" onPointerDown={onBackground}>
-        <defs>
-          <pattern id="grid" width="18" height="18" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="1" fill="#e3e8ef"/>
-          </pattern>
-          <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L9,3 z" fill="#111"/>
-          </marker>
-        </defs>
-        <rect width="900" height="560" fill="url(#grid)" />
-        {children}
-      </svg>
-    </div>
-  );
+function SvgBase({children,onMove,onUp,onBackground}) {
+  const [view,setView]=useState({x:0,y:0,w:900,h:560});
+  const drawing=useRef(null);
+  function fit(){const b=drawing.current?.getBBox();if(b&&b.width&&b.height){setView({x:b.x-55,y:b.y-55,w:Math.max(b.width+110,300),h:Math.max(b.height+110,240)});}}
+  function zoom(factor){setView(v=>{const w=Math.min(3600,Math.max(180,v.w*factor)),h=w*v.h/v.w;return{x:v.x+(v.w-w)/2,y:v.y+(v.h-h)/2,w,h};});}
+  useEffect(()=>{const id=requestAnimationFrame(fit);return()=>cancelAnimationFrame(id);},[]);
+  return <div className="svg-stage" onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}>
+    <svg width="100%" height="100%" viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`} onPointerDown={onBackground} aria-label="Editable UML diagram">
+      <defs><pattern id="grid" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#dce2eb"/></pattern><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#526079"/></marker></defs>
+      <rect x={view.x} y={view.y} width={view.w} height={view.h} fill="url(#grid)"/>
+      <g ref={drawing}>{children}</g>
+    </svg>
+    <div className="canvas-controls" onPointerDown={e=>e.stopPropagation()}><button aria-label="Zoom out" onClick={()=>zoom(1.25)}><ZoomOut size={16}/></button><span>{Math.round(900/view.w*100)}%</span><button aria-label="Zoom in" onClick={()=>zoom(.8)}><ZoomIn size={16}/></button><span className="control-divider"/><button aria-label="Fit diagram" onClick={fit}><Maximize size={16}/></button></div>
+  </div>;
 }
 
 function EditorShell({ title, children, selected, editOpen, editValue, onEdit, onDelete, extra, modeText }) {
@@ -356,15 +341,19 @@ function EditorShell({ title, children, selected, editOpen, editValue, onEdit, o
 
 function useDrag(model, setModel, collectionName) {
   const [drag, setDrag] = useState(null);
+  const moved = useRef(false);
 
   function beginDrag(e, id) {
     e.stopPropagation();
     const item = model[collectionName].find(x => x.id === id);
     if (!item) return;
+    const svg=e.currentTarget.ownerSVGElement || e.currentTarget.closest("svg");
+    const point=new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+    moved.current=false;
     setDrag({
-      id,
-      startX: e.clientX,
-      startY: e.clientY,
+      id, svg,
+      startX: point.x,
+      startY: point.y,
       origX: item.x,
       origY: item.y
     });
@@ -372,8 +361,9 @@ function useDrag(model, setModel, collectionName) {
 
   function move(e) {
     if (!drag) return;
-    const dx = e.clientX - drag.startX;
-    const dy = e.clientY - drag.startY;
+    const point=new DOMPoint(e.clientX,e.clientY).matrixTransform(drag.svg.getScreenCTM().inverse());
+    const dx = Math.round(point.x - drag.startX);
+    const dy = Math.round(point.y - drag.startY);
     setModel({
       ...model,
       [collectionName]: model[collectionName].map(item =>
@@ -381,7 +371,8 @@ function useDrag(model, setModel, collectionName) {
           ? { ...item, x: Math.max(20, drag.origX + dx), y: Math.max(40, drag.origY + dy) }
           : item
       )
-    });
+    }, {record:!moved.current});
+    moved.current=true;
   }
 
   function end() {
@@ -1091,8 +1082,17 @@ function CodeBlock({code}) {
 }
 
 function ResultPanel({data}) {
-  const stats=data?.statistics||{};
-  return <Panel title={data?.verification_kind === "tlc" ? "TLC Verification" : "Structural Analysis"}><div className={`result-box ${data?.safety_satisfied===false?"fail":""}`}><CheckSquare size={28}/><div><h3>{data?.verification_kind === "tlc" ? "TLC Result" : "Structural Analysis Result"}</h3><p>{data?.result||"Click Analyze Model to check the specification."}</p></div></div><h4>Statistics</h4><Info label={data?.verification_kind === "tlc" ? "States Generated" : "Reachable Graph Nodes"} value={stats.states_generated??stats.states_explored??"-"}/><Info label={data?.verification_kind === "tlc" ? "Distinct States" : "Distinct Graph Nodes"} value={stats.distinct_states??"-"}/><Info label="Transitions" value={stats.transitions??"-"}/><Info label="Time Taken" value={stats.time_taken??"-"}/><Info label="Result" value={stats.result??"-"} good={stats.result==="PASSED"}/><h4>Properties</h4>{(data?.properties||[]).map(p=><Info key={p.name} label={p.name} value={p.status} good={p.status==="PASSED"}/>)}{data?.warnings?.length>0&&<ul className="warnings">{data.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul>}{data?.tlc_output && <details><summary>TLC log and version</summary><CodeBlock code={data.tlc_output}/></details>}</Panel>
+  const stats=data?.statistics||{},status=stats.result;
+  const tone=status==='PASSED'?'success':status==='VIOLATED'||status==='FAILED'?'failure':status==='ERROR'||status==='INCOMPLETE'?'caution':'neutral';
+  const title=status==='PASSED'?'Checks passed':status==='VIOLATED'?'A property was violated':status==='INCOMPLETE'?'Run incomplete':status==='ERROR'?'Checker error':data?'Diagram analyzed':'Ready when you are';
+  const Icon=tone==='success'?CheckCircle2:tone==='failure'||tone==='caution'?AlertCircle:ShieldCheck;
+  return <Panel title="Verification overview" actions={<span className={`status-pill ${tone}`}>{data?.verification_kind==='tlc'?'TLC':data?'Structural':'Not run'}</span>}>
+    <div className={`result-box ${tone}`}><Icon size={27}/><div><h3>{title}</h3><p>{data?.result||"Draw your diagram, define the contracts, then run verification."}</p></div></div>
+    {data?<><div className="result-metrics"><div><b>{stats.distinct_states??'—'}</b><span>{data.verification_kind==='tlc'?'Distinct states':'Reachable nodes'}</span></div><div><b>{stats.time_taken?.replace(' sec','s')||'—'}</b><span>Run time</span></div></div>
+    <h4>Checked properties</h4>{(data.properties||[]).map(p=><div className="property-result" key={p.name}><span>{p.name.replace(/([a-z])([A-Z])/g,'$1 $2')}</span><span className={`status-pill ${p.status==='PASSED'?'success':p.status==='VIOLATED'?'failure':'neutral'}`}>{p.status.replaceAll('_',' ').toLowerCase()}</span></div>)}
+    {data.warnings?.length>0&&<details className="scope-details"><summary>Scope and assumptions <span>{data.warnings.length}</span></summary><ul className="warnings">{data.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul></details>}
+    {data.tlc_output&&<details className="scope-details"><summary>Checker log</summary><CodeBlock code={data.tlc_output}/></details>}</>:<div className="result-empty"><span className="eyebrow">YOUR NEXT STEPS</span><p><b>01</b> Build or import a diagram</p><p><b>02</b> Review verification contracts</p><p><b>03</b> Run checks and explore the result</p></div>}
+  </Panel>;
 }
 
 function Info({label,value,good}) { return <div className="info"><span>{label}</span><b className={good?"good":""}>{value}</b></div> }
@@ -1145,84 +1145,18 @@ function Dashboard({model,data}) {
 
 
 
-function FirstPage({ model, setModel, loadTemplate, startConverter }) {
-  const [projectName, setProjectName] = useState(model.name || "NewProject");
-  const [author, setAuthor] = useState(model.author || "Shubha Chakraborty");
-  const [description, setDescription] = useState(model.description || "");
-  const [selectedDiagram, setSelectedDiagram] = useState(model.diagram_type || "state_machine");
-
-  const cards = [
-    ["use_case", "Use Case Diagram", "Actors, goals, and system functions."],
-    ["class", "Class Diagram", "Classes, attributes, methods, and relationships."],
-    ["sequence", "Sequence Diagram", "Lifelines, messages, and execution order."],
-    ["activity", "Activity Diagram", "Actions, decisions, branches, and workflow."],
-    ["state_machine", "State Machine Diagram", "States, transitions, events, and safety logic."]
-  ];
-
-  function createAndOpen() {
-    const base = JSON.parse(JSON.stringify(templates[selectedDiagram] || templates.state_machine));
-    base.name = projectName || "NewProject";
-    base.author = author || "";
-    base.description = description || base.description;
-    setModel(base);
-    setTimeout(() => startConverter(), 0);
-  }
-
-  return (
-    <div className="landing-page project-first-page">
-      <div className="project-header">
-        <div>
-          <h1>UML to TLA+ and Python Converter</h1>
-          <p>Create a project, choose one UML diagram, draw the model, and generate TLA+ plus Python code.</p>
-        </div>
-
-      </div>
-
-      <div className="new-project-panel">
-        <div className="section-title">
-          <h2>New Project</h2>
-          <p>Enter the basic project details before opening the converter.</p>
-        </div>
-        <div className="project-form-grid">
-          <label>
-            Project Name
-            <input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="AutonomousVehicle"/>
-          </label>
-          <label>
-            Author
-            <input value={author} onChange={e => setAuthor(e.target.value)} placeholder="Author name"/>
-          </label>
-          <label className="wide-field">
-            Description
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description of the UML model"/>
-          </label>
-        </div>
-      </div>
-
-      <div className="diagram-select-panel">
-        <div className="section-title">
-          <h2>Select UML Diagram</h2>
-          <p>The selected diagram will open in the convert page with its own drawing tools.</p>
-        </div>
-        <div className="diagram-card-grid">
-          {cards.map(([kind, title, desc]) => (
-            <button
-              key={kind}
-              className={`diagram-card ${selectedDiagram === kind ? "chosen" : ""}`}
-              onClick={() => setSelectedDiagram(kind)}
-            >
-              <b>{title}</b>
-              <span>{desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="landing-actions">
-        <button className="primary-start" onClick={createAndOpen}>Create Project and Open Convert Page</button>
-      </div>
-    </div>
-  );
+function FirstPage({model,setModel,startConverter,onImport,onCreate}) {
+  const [projectName,setProjectName]=useState("");
+  const [author,setAuthor]=useState(model.author||"");
+  const [selectedDiagram,setSelectedDiagram]=useState("state_machine");
+  const descriptions={state_machine:"States, events and safety contracts",use_case:"Actors, permissions and completion",class:"Structure, attributes and relationships",sequence:"Messages and interaction order",activity:"Actions, decisions and workflow"};
+  function create(){const base=structuredClone(templates[selectedDiagram]);base.name=projectName.trim()||base.name;base.author=author;onCreate(base);}
+  return <div className="landing-page"><nav className="landing-nav"><div className="brand"><span className="logo"><GitBranch size={22}/></span><span><b>UML2TLA+</b><small>MODEL WORKSPACE</small></span></div><button className="quiet-button" onClick={onImport}><Upload size={16}/> Import project</button></nav>
+    <section className="landing-hero"><div><span className="hero-label"><span className="nav-dot"/> A workspace for thoughtful software design</span><h1>Build a model.<br/><span>Understand its behavior.</span></h1><p>Turn UML diagrams into formal specifications. Check properties with TLC and explore exactly where a model succeeds or fails.</p><button className="resume-button" onClick={startConverter}><span className="resume-icon"><Layers size={22}/></span><span><small>CONTINUE YOUR PROJECT</small><b>{model.name}</b></span><ArrowRight size={20}/></button></div>
+    <div className="hero-model" aria-hidden="true"><div className="hero-model-top"><span className="eyebrow">MODEL → EVIDENCE</span><span className="status-pill success">Explicit contracts</span></div><svg viewBox="0 0 420 210"><path d="M80 106 H154 M260 106 H332" fill="none" stroke="#b3a4ef" strokeWidth="2" strokeDasharray="5 5"/><circle cx="60" cy="106" r="20" fill="#ece8ff"/><circle cx="60" cy="106" r="7" fill="#7453d7"/><rect x="154" y="76" width="106" height="60" rx="13" fill="#f4f1ff" stroke="#bcaded"/><text x="207" y="110" textAnchor="middle">Model</text><circle cx="352" cy="106" r="22" fill="#e6f4ed"/><path d="m342 105 7 7 13-15" stroke="#298465" strokeWidth="3" fill="none"/><text x="207" y="170" textAnchor="middle" fill="#64748b">Specify. Verify. Explore.</text></svg><div className="hero-model-footer"><span><FileCode size={15}/> TLA+ specification</span><span><Route size={15}/> Counterexample traces</span></div></div></section>
+    <section className="project-launch"><div className="launch-heading"><span className="eyebrow">START SOMETHING NEW</span><h2>Create a project</h2><p>Choose the diagram that matches what you want to model.</p></div><div className="diagram-card-grid">{Object.entries(diagramNames).map(([kind,name],i)=><button key={kind} className={`diagram-card ${selectedDiagram===kind?'chosen':''}`} aria-pressed={selectedDiagram===kind} onClick={()=>setSelectedDiagram(kind)}><span className="diagram-card-icon">{kind==='class'?<Square size={22}/>:kind==='use_case'?<Circle size={22}/>:<GitBranch size={22}/>}</span><b>{name}</b><span>{descriptions[kind]}</span><small>{['state_machine','use_case'].includes(kind)?'TLC verification':'Structural analysis'}</small>{selectedDiagram===kind&&<CheckCircle2 className="diagram-selected" size={17}/>}</button>)}</div>
+    <div className="project-form-grid"><label>Project name<input value={projectName} onChange={e=>setProjectName(e.target.value)} placeholder="e.g. Vehicle safety controller"/></label><label>Author <span>(optional)</span><input value={author} onChange={e=>setAuthor(e.target.value)} placeholder="Your name"/></label><button className="primary-button" onClick={create}>Open workspace <ArrowRight size={18}/></button></div></section><footer className="landing-footer"><span>UML2TLA+ · Workspace 5.0</span><span>Five diagram types. One place to work.</span></footer>
+  </div>;
 }
 
 const PROJECT_KEY = "uml2tla_five_project";
@@ -1285,6 +1219,10 @@ function App(){
   const [model,replaceModel]=useState(()=>{try { const saved=localStorage.getItem(PROJECT_KEY); return saved?normalizeProject(JSON.parse(saved)):structuredClone(templates.state_machine); } catch { return structuredClone(templates.state_machine); }});
   const [active,setActive]=useState("editor");
   const [page,setPage]=useState("home");
+  const [workspaceTab,setWorkspaceTab]=useState("canvas");
+  const [navOpen,setNavOpen]=useState(false);
+  const [showInspector,setShowInspector]=useState(false);
+  const diagramDrafts=useRef((()=>{try{const parsed=JSON.parse(localStorage.getItem("uml2tla_diagram_drafts_v5")||"{}");return Object.fromEntries(Object.entries(parsed).filter(([k])=>diagramNames[k]).map(([k,v])=>[k,normalizeProject(v)]));}catch{return {};}})());
   const [data,setData]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
@@ -1293,15 +1231,15 @@ function App(){
   const [saveStatus,setSaveStatus]=useState("Saved locally");
   const past=useRef([]), future=useRef([]), revision=useRef(0), inFlight=useRef(false);
   const fileInput=useRef(null);
-  function setModel(value) {
-    past.current=[...past.current.slice(-49),model]; future.current=[];
+  function setModel(value,options={}) {
+    if(options.record!==false)past.current=[...past.current.slice(-49),model]; future.current=[];
     revision.current++; replaceModel(typeof value === "function" ? value(model) : value); setData(null); setError("");
   }
   function undo(){ if(!past.current.length)return; future.current.push(model); const old=past.current.pop(); revision.current++; replaceModel(old); setData(null); }
   function redo(){ if(!future.current.length)return; past.current.push(model); const next=future.current.pop(); revision.current++; replaceModel(next); setData(null); }
-  useEffect(()=>{try {localStorage.setItem(PROJECT_KEY,JSON.stringify(model)); setSaveStatus("Saved locally");} catch {setSaveStatus("Local save unavailable. Download your project.");}},[model]);
+  useEffect(()=>{try {localStorage.setItem(PROJECT_KEY,JSON.stringify(model));diagramDrafts.current[model.diagram_type]=model;localStorage.setItem("uml2tla_diagram_drafts_v5",JSON.stringify(diagramDrafts.current)); setSaveStatus("Saved locally");} catch {setSaveStatus("Local save unavailable. Download your project.");}},[model]);
   useEffect(()=>{function key(e){if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)||e.target.isContentEditable)return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo();}}window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key);},[model]);
-  function loadTemplate(kind){ setModel(structuredClone(templates[kind])); setActive("editor"); }
+  function loadTemplate(kind){diagramDrafts.current[model.diagram_type]=structuredClone(model);setModel(diagramDrafts.current[kind]||{...structuredClone(templates[kind]),name:model.name,author:model.author});setActive("editor");setWorkspaceTab("canvas");setNavOpen(false);}
   async function convert(endpoint=API_URL){
     if(inFlight.current)return;
     inFlight.current=true;setBusy(true);setError("");setData(null);
@@ -1315,7 +1253,7 @@ function App(){
     } catch(e) { if(version===revision.current)setError(e.name==="AbortError"?"Conversion timed out. Please retry.":e.message); }
     finally {clearTimeout(timeout);inFlight.current=false;setBusy(false);}
   }
-  function downloadAll(){ downloadText(`${model.name}_project.json`, JSON.stringify({schema_version:2,model,...(data||{})},null,2)); }
+  function downloadAll(){ downloadText(`${model.name}_project.json`, JSON.stringify({schema_version:3,model,diagrams:{...diagramDrafts.current,[model.diagram_type]:model},...(data||{})},null,2)); }
   async function downloadArchive() {
     if(inFlight.current)return;
     inFlight.current=true;setBusy(true);setError("");
@@ -1332,7 +1270,7 @@ function App(){
     const f=e.target.files[0]; e.target.value="";if(!f)return;
     if(f.size>2*1024*1024){setError("Project files must be smaller than 2 MB.");return;}
     const r=new FileReader();r.onerror=()=>setError("Could not read this file.");
-    r.onload=()=>{try {const parsed=JSON.parse(r.result);setModel(normalizeProject(parsed.model||parsed));}catch(err){setError(`Import failed: ${err.message}`);}};r.readAsText(f);
+    r.onload=()=>{try {const parsed=JSON.parse(r.result);const next=normalizeProject(parsed.model||parsed);const drafts=parsed.diagrams?Object.fromEntries(Object.entries(parsed.diagrams).map(([k,v])=>[k,normalizeProject(v)])):{};diagramDrafts.current=drafts;setModel(next);}catch(err){setError(`Import failed: ${err.message}`);}};r.readAsText(f);
   }
 
   let content;
@@ -1344,82 +1282,24 @@ function App(){
   else if(active==="settings") content=<SettingsPanel model={model} setModel={setModel}/>;
   else content=<Dashboard model={model} data={data}/>;
 
-  return (
-    <div className="app">
-      {page === "home" ? (
-        <FirstPage
-          model={model}
-          setModel={setModel}
-          loadTemplate={loadTemplate}
-          startConverter={() => { setActive("editor"); setPage("convert"); }}
-        />
-      ) : (
-        <>
-          <Header model={model} onVerify={()=>convert(["state_machine","use_case"].includes(model.diagram_type)?"/api/verify":API_URL)} onGenerate={()=>convert(model.diagram_type === "use_case" ? "/api/verify" : API_URL)} onImport={() => fileInput.current.click()} onDownloadAll={downloadAll} busy={busy}/>
-          <input ref={fileInput} type="file" accept="application/json" hidden onChange={importProject}/>
-          <div className="body">
-            <Sidebar active={active} setActive={setActive} model={model} loadTemplate={loadTemplate}/>
-            <main className="workspace">
-              <div className="upgrade-status" role="status"><span>{busy ? "Analyzing model…" : saveStatus}</span><span>{data?.verification_kind === "tlc" ? "TLC model checking" : "Structural analysis"}</span></div>
-              {tlcReady === false && ["state_machine","use_case"].includes(model.diagram_type) && <div className="upgrade-error">TLC is not installed on this server. Deploy with the repository Dockerfile to enable verification.</div>}
-              {error && <div className="upgrade-error" role="alert">{error}</div>}
-              <div className="back-row">
-                {["state_machine","use_case"].includes(model.diagram_type) && <button className="mini primary-mini" disabled={busy} onClick={()=>convert("/api/verify")}>Verify with TLC</button>}
-                {data?.verification_kind === "tlc" && <button className="mini" onClick={()=>downloadText(`${model.name}_TLC_report.json`,JSON.stringify(data,null,2))}>Download TLC report</button>}
-                <button className="mini" disabled={busy} onClick={downloadArchive}>Download complete ZIP</button>
-                <button className="mini" disabled={!past.current.length} onClick={undo}>Undo</button>
-                <button className="mini" disabled={!future.current.length} onClick={redo}>Redo</button>
-                {data?.cfg && <button className="mini" onClick={()=>downloadText(`${data.module_name}.cfg`,data.cfg)}>Download TLC config</button>}
-                {data?.traceability?.length>0 && <button className="mini" onClick={()=>downloadText(`${model.name}_traceability.json`,JSON.stringify(data.traceability,null,2))}>Export traceability</button>}
-                <button className="mini" onClick={() => setPage("home")}>← First Page</button>
-                <button className="mini primary-mini" disabled={busy} onClick={()=>convert(model.diagram_type === "use_case" ? "/api/verify" : API_URL)}>Generate TLA+ and Python</button>
-              </div>
-              {active === "editor" && model.diagram_type === "use_case" && <UseCaseTLCSettings model={model} setModel={setModel}/>}
-              {active === "editor" && model.diagram_type === "state_machine" && <TLCSettings model={model} setModel={setModel}/>}
-              {active === "editor" ? (
-                <div className="convert-layout">
-                  <section className="large-diagram-area">
-                    <Panel title={`${model.diagram_type.replace("_"," ")} Diagram Canvas`}>
-                      <div className="large-diagram-with-props">
-                        <RenderDiagram model={model} setModel={setModel}/>
-                        <PropertiesPanel model={model} setModel={setModel}/>
-                      </div>
-                    </Panel>
-                  </section>
-
-                  <aside className="convert-side-panel">
-                    <ResultPanel data={data}/>
-                  </aside>
-
-                  <section className="code-row">
-                    <Panel title="TLA+ Specification" actions={
-                      <>
-                        <button className="mini" onClick={() => copy(data?.tla || "")}><Copy size={15}/> Copy</button>
-                        <button className="mini" onClick={() => downloadText(`${data?.module_name || model.name}.tla`, data?.tla || "")}><Download size={15}/> .tla</button>
-                      </>
-                    }>
-                      <CodeBlock code={data?.tla || "Click Generate TLA+ and Python."}/>
-                    </Panel>
-                    <Panel title="Python Code" actions={
-                      <>
-                        <button className="mini" onClick={() => copy(data?.python_code || "")}><Copy size={15}/> Copy</button>
-                        <button className="mini" onClick={() => downloadText(`${model.name}.py`, data?.python_code || "")}><Download size={15}/> .py</button>
-                      </>
-                    }>
-                      <CodeBlock code={data?.python_code || "Click Generate TLA+ and Python."}/>
-                    </Panel>
-                    <TraceTable trace={data?.trace}/>
-                  </section>
-                </div>
-              ) : (
-                <div className="single-view">{content}</div>
-              )}
-            </main>
-          </div>
-        </>
-      )}
-    </div>
-  )
+  const supported=["state_machine","use_case"].includes(model.diagram_type);
+  const run=()=>convert(supported?"/api/verify":API_URL);
+  const outputActions=(kind)=><><button className="mini" disabled={!data} onClick={()=>copy(kind==='tla'?data.tla:data.python_code)}><Copy size={14}/>Copy</button><button className="mini" disabled={!data} onClick={()=>downloadText(kind==='tla'?`${data.module_name||model.name}.tla`:`${model.name}.py`,kind==='tla'?data.tla:data.python_code)}><Download size={14}/>Save</button></>;
+  return <div className={`app ${navOpen?'nav-open':''}`}><input ref={fileInput} type="file" accept="application/json" hidden onChange={e=>{importProject(e);setPage("convert");}}/>
+    {page==='home'?<FirstPage model={model} setModel={setModel} onCreate={base=>{diagramDrafts.current={};setModel(base);setActive("editor");setPage("convert");setWorkspaceTab("canvas");}} startConverter={()=>{setActive("editor");setPage("convert");setWorkspaceTab("canvas");}} onImport={()=>fileInput.current.click()}/>:<>
+      <Header model={model} onHome={()=>setPage("home")} onNavToggle={()=>setNavOpen(v=>!v)} onSettings={()=>setActive("settings")} onVerify={run} onGenerate={()=>convert(API_URL)} onImport={()=>fileInput.current.click()} onDownloadAll={downloadAll} busy={busy}/>
+      <div className="body"><Sidebar active={active} setActive={value=>{setActive(value);setNavOpen(false);}} model={model} loadTemplate={loadTemplate} onHome={()=>setPage("home")}/>
+      <main className="workspace"><div className="workspace-heading"><div><span className="eyebrow">{diagramNames[model.diagram_type]} / {active==='editor'?'MODEL EDITOR':active==='checking'?'VERIFICATION':active.toUpperCase()}</span><h1>{model.name}</h1><p>{model.description||"Design your diagram, define its contracts, and explore the results."}</p></div><div className="workspace-status"><span className={`status-pill ${tlcReady&&supported?'success':'neutral'}`}><span className="nav-dot"/>{supported?(tlcReady?'TLC ready':tlcReady===false?'TLC unavailable':'Checking TLC…'):'Structural analysis'}</span><small>{busy?'Running your request…':saveStatus}</small></div></div>
+      {tlcReady===false&&supported&&<div className="upgrade-error"><AlertCircle size={18}/><span>TLC is unavailable on this server. Deploy using the repository Dockerfile to enable model checking.</span></div>}
+      {error&&<div className="upgrade-error" role="alert"><AlertCircle size={18}/><span>{error}</span><button className="icon-button" aria-label="Dismiss error" onClick={()=>setError("")}><X size={16}/></button></div>}
+      {active==='editor'?<><div className="workspace-toolbar"><div className="workspace-tabs" role="tablist" aria-label="Workspace views">{[['canvas','Diagram',<GitBranch size={16}/>],['contracts','Contracts',<SlidersHorizontal size={16}/>],['outputs','Generated files',<FileCode size={16}/>],['trace','Trace explorer',<Route size={16}/>]].map(([key,name,icon])=><button key={key} role="tab" aria-selected={workspaceTab===key} className={workspaceTab===key?'active':''} onClick={()=>setWorkspaceTab(key)}>{icon}{name}</button>)}</div><div className="toolbar-actions"><button className="icon-button" disabled={!past.current.length} onClick={undo} aria-label="Undo"><Undo2 size={17}/></button><button className="icon-button" disabled={!future.current.length} onClick={redo} aria-label="Redo"><Redo2 size={17}/></button><button className="quiet-button" disabled={busy} onClick={downloadArchive}><Download size={16}/> Export ZIP</button></div></div>
+      <div className="editor-workspace" role="tabpanel">
+      <section className="editor-main">{workspaceTab==='canvas'?<Panel title="Diagram canvas" actions={<button className={`mini ${showInspector?'selected-control':''}`} onClick={()=>setShowInspector(v=>!v)}><SlidersHorizontal size={14}/>Properties</button>}><div className={`large-diagram-with-props ${showInspector?'inspector-open':''}`}><RenderDiagram key={model.diagram_type} model={model} setModel={setModel}/>{showInspector&&<PropertiesPanel model={model} setModel={setModel}/>}</div><div className="canvas-footer"><span><MousePointer2 size={14}/> Drag nodes to arrange · Open Properties to rename</span><span>{diagramNames[model.diagram_type]}</span></div></Panel>:workspaceTab==='contracts'?(model.diagram_type==='state_machine'?<TLCSettings model={model} setModel={setModel}/>:model.diagram_type==='use_case'?<UseCaseTLCSettings model={model} setModel={setModel}/>:<Panel title="Analysis scope"><div className="empty-view"><Layers size={30}/><h3>Structural analysis</h3><p>This diagram supports structural inspection and code generation. Behavioral TLC contracts are available for state-machine and use-case diagrams.</p><button className="primary-button" disabled={busy} onClick={run}>Analyze diagram</button></div></Panel>):workspaceTab==='outputs'?<div className="outputs-grid"><Panel title="TLA+ specification" actions={outputActions('tla')}><CodeBlock code={data?.tla||"Generate files or verify your model to see its specification."}/></Panel><Panel title="Python implementation" actions={outputActions('python')}><CodeBlock code={data?.python_code||"Generate files to see the Python prototype."}/></Panel><div className="export-strip"><button className="primary-button" disabled={busy} onClick={()=>convert(model.diagram_type==='use_case'?'/api/verify':API_URL)}><Code2 size={16}/> Generate files</button>{data?.cfg&&<button className="mini" onClick={()=>downloadText(`${data.module_name}.cfg`,data.cfg)}>TLC configuration</button>}{data?.traceability?.length>0&&<button className="mini" onClick={()=>downloadText(`${model.name}_traceability.json`,JSON.stringify(data.traceability,null,2))}>Traceability JSON</button>}</div></div>:<TraceTable trace={data?.trace}/>}</section>
+      <aside className="results-rail"><ResultPanel data={data}/><div className="result-actions"><button className="primary-button" disabled={busy} onClick={run}>{busy?<Loader2 className="spin" size={17}/>:<ShieldCheck size={17}/>} {busy?'Working…':supported?'Run verification':'Run analysis'}</button>{data?.verification_kind==='tlc'&&<button className="quiet-button" onClick={()=>downloadText(`${model.name}_TLC_report.json`,JSON.stringify(data,null,2))}><Download size={15}/> Download report</button>}</div></aside>
+      </div></>:<div className="single-view">{content}</div>}
+      <footer className="workspace-footer"><span>UML2TLA+ Workspace 5.0</span><span><CheckCircle2 size={13}/> {saveStatus}</span></footer>
+      </main></div></>}
+  </div>;
 }
 
 createRoot(document.getElementById("root")).render(<App/>);

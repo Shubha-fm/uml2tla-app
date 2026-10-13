@@ -57,7 +57,7 @@ class UpgradeTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/export',json={'diagram_type':'unknown'}).status_code,422)
     def test_health_version(self):
         result=self.client.get('/api/health').json()
-        self.assertEqual(result['version'],'4.2.0')
+        self.assertEqual(result['version'],'5.0.0')
         self.assertIsInstance(result['tlc_available'],bool)
     def test_dead_end(self):
         self.model['transitions']=self.model['transitions'][:2]
