@@ -12,6 +12,9 @@ const templates = {
     description: "State-machine model for autonomous vehicle safety control.",
     author: "Shubha Chakraborty",
     safety_property: "hazard = TRUE => mode # Cruise",
+    verification_variables: {hazard:false},
+    verification_safety: 'not hazard or pc != "cruise"',
+    response_condition: "hazard", response_target: "stop", weak_fairness:false,
     states: [
       { id: "start", name: "start", type: "initial", x: 82, y: 142 },
       { id: "cruise", name: "Cruise", type: "state", x: 196, y: 115 },
@@ -21,10 +24,10 @@ const templates = {
     ],
     transitions: [
       { id: "e1", source: "start", target: "cruise", label: "" },
-      { id: "e2", source: "cruise", target: "slow", label: "hazard_detected" },
-      { id: "e3", source: "slow", target: "cruise", label: "hazard_clear" },
-      { id: "e4", source: "slow", target: "stop", label: "hazard_critical" },
-      { id: "e5", source: "stop", target: "cruise", label: "reset" },
+      { id: "e2", source: "cruise", target: "slow", label: "hazard_detected", guard:"True", updates:{hazard:true} },
+      { id: "e3", source: "slow", target: "cruise", label: "hazard_clear", guard:"hazard", updates:{hazard:false} },
+      { id: "e4", source: "slow", target: "stop", label: "hazard_critical", guard:"hazard", updates:{} },
+      { id: "e5", source: "stop", target: "cruise", label: "reset", guard:"True", updates:{hazard:false} },
       { id: "e6", source: "stop", target: "end", label: "" }
     ],
     actors: [], use_cases: [], associations: [], classes: [], relationships: [], lifelines: [], messages: [], actions: [], flows: []
@@ -1087,7 +1090,7 @@ function CodeBlock({code}) {
 
 function ResultPanel({data}) {
   const stats=data?.statistics||{};
-  return <Panel title="Structural Analysis"><div className={`result-box ${data?.safety_satisfied===false?"fail":""}`}><CheckSquare size={28}/><div><h3>Structural Analysis Result</h3><p>{data?.result||"Click Analyze Model to check the specification."}</p></div></div><h4>Statistics</h4><Info label="Reachable Graph Nodes" value={stats.states_explored??"-"}/><Info label="Distinct Graph Nodes" value={stats.distinct_states??"-"}/><Info label="Transitions" value={stats.transitions??"-"}/><Info label="Time Taken" value={stats.time_taken??"-"}/><Info label="Result" value={stats.result??"-"} good={stats.result==="PASSED"}/><h4>Properties</h4>{(data?.properties||[]).map(p=><Info key={p.name} label={p.name} value={p.status} good={p.status==="PASSED"}/>)}{data?.warnings?.length>0&&<ul className="warnings">{data.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul>}</Panel>
+  return <Panel title={data?.verification_kind === "tlc" ? "TLC Verification" : "Structural Analysis"}><div className={`result-box ${data?.safety_satisfied===false?"fail":""}`}><CheckSquare size={28}/><div><h3>{data?.verification_kind === "tlc" ? "TLC Result" : "Structural Analysis Result"}</h3><p>{data?.result||"Click Analyze Model to check the specification."}</p></div></div><h4>Statistics</h4><Info label={data?.verification_kind === "tlc" ? "States Generated" : "Reachable Graph Nodes"} value={stats.states_generated??stats.states_explored??"-"}/><Info label={data?.verification_kind === "tlc" ? "Distinct States" : "Distinct Graph Nodes"} value={stats.distinct_states??"-"}/><Info label="Transitions" value={stats.transitions??"-"}/><Info label="Time Taken" value={stats.time_taken??"-"}/><Info label="Result" value={stats.result??"-"} good={stats.result==="PASSED"}/><h4>Properties</h4>{(data?.properties||[]).map(p=><Info key={p.name} label={p.name} value={p.status} good={p.status==="PASSED"}/>)}{data?.warnings?.length>0&&<ul className="warnings">{data.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul>}{data?.tlc_output && <details><summary>TLC log and version</summary><CodeBlock code={data.tlc_output}/></details>}</Panel>
 }
 
 function Info({label,value,good}) { return <div className="info"><span>{label}</span><b className={good?"good":""}>{value}</b></div> }
@@ -1096,7 +1099,7 @@ function Info({label,value,good}) { return <div className="info"><span>{label}</
 function TraceTable({trace}) {
   const rows = trace || [];
   return (
-    <Panel title="Graph Trace" actions={<span className="trace-action-label">Trace</span>}>
+    <Panel title="Graph / Counterexample Trace" actions={<span className="trace-action-label">Trace</span>}>
       <div className="trace-scroll">
         {rows.length === 0 ? (
           <div className="trace-empty">Click Generate TLA+ and Python to see the graph discovery trace.</div>
@@ -1115,7 +1118,7 @@ function TraceTable({trace}) {
               {rows.map((r, i) => (
                 <tr key={i}>
                   <td>{r.step ?? i}</td>
-                  <td>{r.node ?? r.mode ?? r.pc ?? r.class ?? r.source ?? "-"}</td>
+                  <td>{r.values?.pc ?? r.node ?? r.mode ?? r.pc ?? r.class ?? r.source ?? "-"}</td>
                   <td>{r.event ?? r.action ?? r.message ?? r.flow ?? "-"}</td>
                   <td><code>{JSON.stringify(r)}</code></td>
                   <td>{r.safe === undefined ? "Not checked" : String(r.safe)}</td>
@@ -1243,6 +1246,29 @@ function normalizeProject(value) {
   }
   return result;
 }
+function tlcExample(unsafe=false) {
+  return {...structuredClone(templates.state_machine), name:unsafe?"TLCUnsafeExample":"TLCSafeExample",
+    states:[{id:"start",name:"Start",type:"initial",x:60,y:130},{id:"idle",name:"Idle",type:"state",x:180,y:130},{id:"stop",name:"EmergencyStop",type:"state",x:450,y:130},{id:"end",name:"End",type:"final",x:670,y:130}],
+    transitions:[{id:"init",source:"start",target:"idle",label:"begin",guard:"True",updates:{}},{id:"detect",source:"idle",target:unsafe?"idle":"stop",label:"hazard detected",guard:"not hazard",updates:{hazard:true}},{id:"finish",source:"stop",target:"end",label:"finish",guard:"True",updates:{hazard:false}}],
+    verification_variables:{hazard:false},verification_safety:'not hazard or pc == "stop"',response_condition:'pc == "idle"',response_target:"stop",weak_fairness:true};
+}
+function TLCSettings({model,setModel}) {
+  const [variables,setVariables]=useState(JSON.stringify(model.verification_variables||{}));
+  useEffect(()=>setVariables(JSON.stringify(model.verification_variables||{})),[model.verification_variables]);
+  function updateJSON(text, callback) {try {const value=JSON.parse(text);if(!value||Array.isArray(value)||typeof value!=="object"||Object.values(value).some(x=>typeof x!=="boolean"))throw new Error("Use an object of boolean values.");callback(value);}catch(e){alert(`Invalid boolean values: ${e.message}`);}}
+  return <Panel title="TLC Behavioral Verification"><div className="tlc-settings">
+    <p>State machines only. Guards use boolean variables, pc, quoted state IDs, True/False, and/or/not, == and !=. Labels do not change behavior.</p>
+    <label>Boolean variables and initial values (JSON)<input value={variables} onChange={e=>setVariables(e.target.value)} onBlur={()=>updateJSON(variables,v=>setModel({...model,verification_variables:v}))}/></label>
+    <label>Safety invariant<input value={model.verification_safety||""} placeholder={'not hazard or pc != "cruise"'} onChange={e=>setModel({...model,verification_safety:e.target.value})}/></label>
+    <label>Response condition (optional)<input value={model.response_condition||""} placeholder="hazard" onChange={e=>setModel({...model,response_condition:e.target.value})}/></label>
+    <label>Response target<select value={model.response_target||""} onChange={e=>setModel({...model,response_target:e.target.value})}><option value="">No target</option>{model.states.map(n=><option key={n.id} value={n.id}>{n.name} ({n.id})</option>)}</select></label>
+    <label><input type="checkbox" checked={!!model.weak_fairness} onChange={e=>setModel({...model,weak_fairness:e.target.checked})}/> Assume weak fairness for every transition</label>
+    <p>Without fairness, a response property may fail because the model can stutter forever. Fairness does not resolve all competing branches.</p>
+    <div><button className="mini" onClick={()=>setModel(tlcExample())}>Load passing TLC example</button> <button className="mini" onClick={()=>setModel(tlcExample(true))}>Load violating TLC example</button></div>
+    <h4>Transition semantics</h4>
+    {model.transitions.map(t=><div className="tlc-transition" key={t.id}><b>{t.id}: {t.source} → {t.target}</b><label>Guard<input value={t.guard||"True"} onChange={e=>setModel({...model,transitions:model.transitions.map(x=>x.id===t.id?{...x,guard:e.target.value}:x)})}/></label><label>Boolean updates (JSON)<input key={JSON.stringify(t.updates||{})} defaultValue={JSON.stringify(t.updates||{})} onBlur={e=>updateJSON(e.target.value,v=>setModel({...model,transitions:model.transitions.map(x=>x.id===t.id?{...x,updates:v}:x)}))}/></label></div>)}
+  </div></Panel>;
+}
 function App(){
   const [model,replaceModel]=useState(()=>{try { const saved=localStorage.getItem(PROJECT_KEY); return saved?normalizeProject(JSON.parse(saved)):structuredClone(templates.state_machine); } catch { return structuredClone(templates.state_machine); }});
   const [active,setActive]=useState("editor");
@@ -1262,13 +1288,13 @@ function App(){
   useEffect(()=>{try {localStorage.setItem(PROJECT_KEY,JSON.stringify(model)); setSaveStatus("Saved locally");} catch {setSaveStatus("Local save unavailable. Download your project.");}},[model]);
   useEffect(()=>{function key(e){if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)||e.target.isContentEditable)return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo();}}window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key);},[model]);
   function loadTemplate(kind){ setModel(structuredClone(templates[kind])); setActive("editor"); }
-  async function convert(){
+  async function convert(endpoint=API_URL){
     if(inFlight.current)return;
     inFlight.current=true;setBusy(true);setError("");
     const version=revision.current, controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),30000);
+    const timeout=setTimeout(()=>controller.abort(),140000);
     try {
-      const res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(model),signal:controller.signal});
+      const res=await fetch(typeof endpoint === "string" ? endpoint : API_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(model),signal:controller.signal});
       const json=await res.json();
       if(!res.ok) throw new Error(typeof json.detail === "string" ? json.detail : JSON.stringify(json.detail || "Conversion failed"));
       if(version===revision.current)setData(json);
@@ -1320,9 +1346,11 @@ function App(){
           <div className="body">
             <Sidebar active={active} setActive={setActive} model={model} loadTemplate={loadTemplate}/>
             <main className="workspace">
-              <div className="upgrade-status" role="status"><span>{busy ? "Analyzing model…" : saveStatus}</span><span>v4 · Structural analysis</span></div>
+              <div className="upgrade-status" role="status"><span>{busy ? "Analyzing model…" : saveStatus}</span><span>{data?.verification_kind === "tlc" ? "TLC model checking" : "Structural analysis"}</span></div>
               {error && <div className="upgrade-error" role="alert">{error}</div>}
               <div className="back-row">
+                {model.diagram_type === "state_machine" && <button className="mini primary-mini" disabled={busy} onClick={()=>convert("/api/verify")}>Verify with TLC</button>}
+                {data?.verification_kind === "tlc" && <button className="mini" onClick={()=>downloadText(`${model.name}_TLC_report.json`,JSON.stringify(data,null,2))}>Download TLC report</button>}
                 <button className="mini" disabled={busy} onClick={downloadArchive}>Download complete ZIP</button>
                 <button className="mini" disabled={!past.current.length} onClick={undo}>Undo</button>
                 <button className="mini" disabled={!future.current.length} onClick={redo}>Redo</button>
@@ -1331,6 +1359,7 @@ function App(){
                 <button className="mini" onClick={() => setPage("home")}>← First Page</button>
                 <button className="mini primary-mini" disabled={busy} onClick={convert}>Generate TLA+ and Python</button>
               </div>
+              {active === "editor" && model.diagram_type === "state_machine" && <TLCSettings model={model} setModel={setModel}/>}
               {active === "editor" ? (
                 <div className="convert-layout">
                   <section className="large-diagram-area">

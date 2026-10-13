@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StrictBool
 from typing import List, Dict, Optional, Any
 
 
@@ -11,6 +11,8 @@ class UMLState(BaseModel):
 
 
 class UMLTransition(BaseModel):
+    guard: str = "True"
+    updates: Dict[str, StrictBool] = Field(default_factory=dict)
     id: str
     source: str
     target: str
@@ -86,6 +88,11 @@ class UMLFlow(BaseModel):
 
 
 class UMLModel(BaseModel):
+    verification_variables: Dict[str, StrictBool] = Field(default_factory=dict)
+    verification_safety: str = ""
+    response_condition: str = ""
+    response_target: str = ""
+    weak_fairness: bool = False
     name: str = "AutonomousVehicle"
     diagram_type: str = "state_machine"
     description: str = ""

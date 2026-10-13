@@ -1,63 +1,26 @@
-# Deploy UML2TLA+ as a Shareable One-Link Web App
+# Deploy UML2TLA+ with TLC
 
-This package is ready for a single public URL deployment. The React frontend calls `/api/convert`, and the FastAPI backend serves both the API and the built frontend.
+Use the included Dockerfile to run the frontend, FastAPI, Java 17 and pinned TLC in one service.
 
-## Option A: Render, easiest single-link deployment
+## Render
 
-1. Create a new GitHub repository.
-2. Upload all files from this folder to the repository.
-3. Go to Render and create a new **Web Service** from that GitHub repository.
-4. Render should detect `render.yaml`. If not, use these settings manually:
+Connect the existing repository and create a Docker Web Service, or deploy the supplied `render.yaml` Blueprint. An existing native Python service may need to be recreated as a Docker service. Use `/api/health` as the health endpoint. The response must show `tlc_available: true` to enable real checker runs.
 
-   Build command:
+The image installs TLC at build time with checksum validation. It listens on Render's `PORT` and supports `TLC_TIMEOUT` (20 seconds by default, maximum 120). The JVM heap is limited to 256 MB; the container needs additional memory for Python and JVM overhead.
 
-   ```bash
-   cd frontend && npm ci && npm run build
-   cd ../backend && pip install -r requirements.txt
-   ```
-
-   Start command:
-
-   ```bash
-   cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
-   ```
-
-5. After deployment, Render will give a public URL like:
-
-   ```text
-   https://your-app-name.onrender.com
-   ```
-
-Share that URL with anyone.
-
-## Option B: Run locally before deployment
-
-Terminal 1:
+## Local Docker
 
 ```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+docker build -t uml2tla .
+docker run --rm -p 8000:8000 uml2tla
 ```
 
-Terminal 2:
+Open http://localhost:8000.
 
-```bash
-cd frontend
-npm ci
-npm run dev
-```
+## Local development
 
-Open:
+Install Java 17+, install backend requirements and run `python backend/install_tlc.py`. Start `uvicorn main:app --reload --port 8000` from `backend`, then `npm ci` and `npm run dev` from `frontend`. Open http://localhost:8080.
 
-```text
-http://localhost:8080
-```
+## Result scope
 
-## Notes
-
-- The app reports structural graph diagnostics. TLC is not bundled or invoked.
-- Temporal safety, guards, fairness and concurrency require an explicit formal model and an external checker.
-- The public link will work as long as the hosting service keeps the web service active.
+State-machine TLC checking uses explicit boolean variables, guards, updates and properties. Other diagrams use structural diagnostics. Read README.md for expression syntax, fairness assumptions, resource limits and counterexample reports.
