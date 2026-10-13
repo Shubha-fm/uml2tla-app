@@ -1,0 +1,49 @@
+{
+  "name": "Login",
+  "diagram_type": "use_case",
+  "actors": [
+    {
+      "id": "user",
+      "name": "User"
+    },
+    {
+      "id": "admin",
+      "name": "Admin"
+    }
+  ],
+  "use_cases": [
+    {
+      "id": "login",
+      "name": "Login"
+    },
+    {
+      "id": "manage",
+      "name": "ManageUsers"
+    }
+  ],
+  "associations": [
+    {
+      "id": "e1",
+      "source": "user",
+      "target": "login"
+    },
+    {
+      "id": "e2",
+      "source": "admin",
+      "target": "manage"
+    },
+    {
+      "id": "bad",
+      "source": "user",
+      "target": "manage"
+    }
+  ],
+  "forbidden_requests": [
+    {
+      "source": "user",
+      "target": "manage"
+    }
+  ],
+  "verify_completion": true,
+  "weak_fairness": true
+}

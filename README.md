@@ -126,3 +126,13 @@ docker run --rm -p 8000:8000 uml2tla
 Open `http://localhost:8000`. For automated checks, install development dependencies and TLC, then run the regression command above. CI installs Java/TLC and runs the integration tests, including actual passing and violating models.
 
 For a quick demonstration, open the state-machine editor, load the passing or violating TLC example, then click **Verify with TLC**. Equivalent importable JSON examples are in `examples/`. The Docker deployment CI builds the full image and checks health, frontend delivery, and real passing/violating API requests.
+
+## Version 4.2: use-case TLC verification
+
+Use-case diagrams now support real TLC checking. **Analyze Model**, **Generate Code** and **Generate TLA+ and Python** run the use-case checker. The `/api/convert` endpoint remains a structural inspection route; `/api/verify` runs TLC. If Java/TLC is unavailable, the UI displays a server setup message and the verification endpoint returns an error, without retaining old structural results.
+
+The finite model tracks sets of requested and completed actor/use-case pairs. Each association permits one request and one completion. TLC checks endpoint types, requests within permitted associations, completion only after request, and forbidden-request contracts. In the use-case contracts panel, select actor/use-case pairs that must never be requested. An association enabling a forbidden request yields a counterexample.
+
+Optionally check eventual completion of every requested pair. Weak fairness applies to completion actions only and is explicitly selectable. Without fairness, infinite stuttering can violate eventual completion. No fairness is imposed on issuing new requests. Completed models admit terminal stuttering.
+
+Limits: 10 distinct associations, 20 actors and 20 use cases. Labels are annotations; this abstraction does not establish actual authentication, credentials, implementation access control or generated Python equivalence. Class, sequence and activity diagrams remain structural. The checked use-case specification and matching config are included in project exports. Exporting does not invoke TLC.

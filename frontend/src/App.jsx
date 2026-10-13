@@ -38,6 +38,8 @@ const templates = {
     description: "Use case model for user authentication.",
     author: "Shubha Chakraborty",
     safety_property: "completed subset requested",
+    forbidden_requests:[{source:"a1",target:"u3"}],
+    weak_fairness:true, verify_completion:true,
     actors: [{id:"a1", name:"User", x:80, y:170}, {id:"a2", name:"Admin", x:80, y:320}],
     use_cases: [{id:"u1", name:"Login", x:320, y:150}, {id:"u2", name:"ResetPassword", x:320, y:260}, {id:"u3", name:"ManageUsers", x:320, y:370}],
     associations: [{id:"ua1", source:"a1", target:"u1", label:"request"}, {id:"ua2", source:"a1", target:"u2", label:"request"}, {id:"ua3", source:"a2", target:"u3", label:"manage"}],
@@ -117,13 +119,13 @@ function copy(text) {
 }
 function downloadText(filename, text) { const blob = new Blob([text], {type:"text/plain"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 
-function Header({ model, onVerify, onImport, onDownloadAll, busy }) {
+function Header({ model, onVerify, onGenerate, onImport, onDownloadAll, busy }) {
   return <header className="topbar">
     <div className="brand"><div className="logo"><GitBranch size={18}/></div><b>UML2TLA+</b></div>
     <div className="project">Project:&nbsp;<span>{model.name}</span><ChevronDown size={15}/></div>
     <div className="top-actions">
       <button disabled={busy} onClick={onVerify}><Play size={17} fill="white"/> Analyze Model</button>
-      <button disabled={busy} onClick={onVerify}><Code2 size={17}/> Generate Code</button>
+      <button disabled={busy} onClick={onGenerate}><Code2 size={17}/> Generate Code</button>
       <button onClick={onImport}><Upload size={17}/> Import</button>
       <button onClick={onDownloadAll}><Download size={17}/> Download</button>
       <Settings size={23} className="gear"/>
@@ -576,8 +578,8 @@ function UseCaseView({ model, setModel }) {
 
   function del() {
     if (!selected) return;
-    if (selected.kind === "actor") setModel({ ...model, actors: model.actors.filter(a => a.id !== selected.id), associations: model.associations.filter(a => a.source !== selected.id) });
-    else if (selected.kind === "usecase") setModel({ ...model, use_cases: model.use_cases.filter(u => u.id !== selected.id), associations: model.associations.filter(a => a.target !== selected.id) });
+    if (selected.kind === "actor") setModel({ ...model, actors: model.actors.filter(a => a.id !== selected.id), forbidden_requests:(model.forbidden_requests||[]).filter(p=>p.source!==selected.id), associations: model.associations.filter(a => a.source !== selected.id) });
+    else if (selected.kind === "usecase") setModel({ ...model, use_cases: model.use_cases.filter(u => u.id !== selected.id), forbidden_requests:(model.forbidden_requests||[]).filter(p=>p.target!==selected.id), associations: model.associations.filter(a => a.target !== selected.id) });
     else setModel({ ...model, associations: model.associations.filter(a => a.id !== selected.id) });
     setSelected(null); setEditOpen(false);
   }
@@ -1252,6 +1254,16 @@ function tlcExample(unsafe=false) {
     transitions:[{id:"init",source:"start",target:"idle",label:"begin",guard:"True",updates:{}},{id:"detect",source:"idle",target:unsafe?"idle":"stop",label:"hazard detected",guard:"not hazard",updates:{hazard:true}},{id:"finish",source:"stop",target:"end",label:"finish",guard:"True",updates:{hazard:false}}],
     verification_variables:{hazard:false},verification_safety:'not hazard or pc == "stop"',response_condition:'pc == "idle"',response_target:"stop",weak_fairness:true};
 }
+function UseCaseTLCSettings({model,setModel}) {
+  const forbidden=model.forbidden_requests||[];
+  function toggle(actor,useCase){const exists=forbidden.some(p=>p.source===actor&&p.target===useCase);setModel({...model,forbidden_requests:exists?forbidden.filter(p=>!(p.source===actor&&p.target===useCase)):[...forbidden,{source:actor,target:useCase}]});}
+  return <Panel title="Use-case TLC Contracts"><div className="tlc-settings"><p>TLC checks actor permissions, completion after request, and the forbidden requests below. Each association permits one request and one completion. Click Analyze Model to run the checker.</p>
+    <label><input type="checkbox" checked={!!model.verify_completion} onChange={e=>setModel({...model,verify_completion:e.target.checked})}/> Check that each request eventually completes</label>
+    <label><input type="checkbox" checked={!!model.weak_fairness} onChange={e=>setModel({...model,weak_fairness:e.target.checked})}/> Assume weak fairness for completion actions</label>
+    <details><summary>Forbidden actor requests</summary><p>Select requests that must never occur. An association permitting a forbidden request produces a TLC counterexample.</p>{model.actors.flatMap(a=>model.use_cases.map(u=><label key={`${a.id}:${u.id}`}><input type="checkbox" checked={forbidden.some(p=>p.source===a.id&&p.target===u.id)} onChange={()=>toggle(a.id,u.id)}/>{a.name} → {u.name}</label>))}</details>
+    <p>The check covers this finite interaction model. It does not check real login credentials or prove generated Python equivalent.</p>
+  </div></Panel>;
+}
 function TLCSettings({model,setModel}) {
   const [variables,setVariables]=useState(JSON.stringify(model.verification_variables||{}));
   useEffect(()=>setVariables(JSON.stringify(model.verification_variables||{})),[model.verification_variables]);
@@ -1276,6 +1288,8 @@ function App(){
   const [data,setData]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
+  const [tlcReady,setTlcReady]=useState(null);
+  useEffect(()=>{fetch("/api/health").then(r=>r.json()).then(h=>setTlcReady(h.tlc_available)).catch(()=>setTlcReady(null));},[]);
   const [saveStatus,setSaveStatus]=useState("Saved locally");
   const past=useRef([]), future=useRef([]), revision=useRef(0), inFlight=useRef(false);
   const fileInput=useRef(null);
@@ -1290,7 +1304,7 @@ function App(){
   function loadTemplate(kind){ setModel(structuredClone(templates[kind])); setActive("editor"); }
   async function convert(endpoint=API_URL){
     if(inFlight.current)return;
-    inFlight.current=true;setBusy(true);setError("");
+    inFlight.current=true;setBusy(true);setError("");setData(null);
     const version=revision.current, controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),140000);
     try {
@@ -1341,15 +1355,16 @@ function App(){
         />
       ) : (
         <>
-          <Header model={model} onVerify={convert} onImport={() => fileInput.current.click()} onDownloadAll={downloadAll} busy={busy}/>
+          <Header model={model} onVerify={()=>convert(["state_machine","use_case"].includes(model.diagram_type)?"/api/verify":API_URL)} onGenerate={()=>convert(model.diagram_type === "use_case" ? "/api/verify" : API_URL)} onImport={() => fileInput.current.click()} onDownloadAll={downloadAll} busy={busy}/>
           <input ref={fileInput} type="file" accept="application/json" hidden onChange={importProject}/>
           <div className="body">
             <Sidebar active={active} setActive={setActive} model={model} loadTemplate={loadTemplate}/>
             <main className="workspace">
               <div className="upgrade-status" role="status"><span>{busy ? "Analyzing model…" : saveStatus}</span><span>{data?.verification_kind === "tlc" ? "TLC model checking" : "Structural analysis"}</span></div>
+              {tlcReady === false && ["state_machine","use_case"].includes(model.diagram_type) && <div className="upgrade-error">TLC is not installed on this server. Deploy with the repository Dockerfile to enable verification.</div>}
               {error && <div className="upgrade-error" role="alert">{error}</div>}
               <div className="back-row">
-                {model.diagram_type === "state_machine" && <button className="mini primary-mini" disabled={busy} onClick={()=>convert("/api/verify")}>Verify with TLC</button>}
+                {["state_machine","use_case"].includes(model.diagram_type) && <button className="mini primary-mini" disabled={busy} onClick={()=>convert("/api/verify")}>Verify with TLC</button>}
                 {data?.verification_kind === "tlc" && <button className="mini" onClick={()=>downloadText(`${model.name}_TLC_report.json`,JSON.stringify(data,null,2))}>Download TLC report</button>}
                 <button className="mini" disabled={busy} onClick={downloadArchive}>Download complete ZIP</button>
                 <button className="mini" disabled={!past.current.length} onClick={undo}>Undo</button>
@@ -1357,8 +1372,9 @@ function App(){
                 {data?.cfg && <button className="mini" onClick={()=>downloadText(`${data.module_name}.cfg`,data.cfg)}>Download TLC config</button>}
                 {data?.traceability?.length>0 && <button className="mini" onClick={()=>downloadText(`${model.name}_traceability.json`,JSON.stringify(data.traceability,null,2))}>Export traceability</button>}
                 <button className="mini" onClick={() => setPage("home")}>← First Page</button>
-                <button className="mini primary-mini" disabled={busy} onClick={convert}>Generate TLA+ and Python</button>
+                <button className="mini primary-mini" disabled={busy} onClick={()=>convert(model.diagram_type === "use_case" ? "/api/verify" : API_URL)}>Generate TLA+ and Python</button>
               </div>
+              {active === "editor" && model.diagram_type === "use_case" && <UseCaseTLCSettings model={model} setModel={setModel}/>}
               {active === "editor" && model.diagram_type === "state_machine" && <TLCSettings model={model} setModel={setModel}/>}
               {active === "editor" ? (
                 <div className="convert-layout">

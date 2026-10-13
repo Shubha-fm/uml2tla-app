@@ -11,7 +11,7 @@ from pathlib import Path
 from time import perf_counter
 from fastapi import HTTPException
 from analysis import validate_model
-from converter import clean_name
+from converter import clean_name, generate_python
 
 RUN_SLOT = threading.BoundedSemaphore(1)
 DEFAULT_JAR = Path(__file__).resolve().parent / 'tools' / 'tla2tools.jar'
@@ -57,9 +57,12 @@ def expression(text, variables, ids):
 
 
 def build_spec(model):
+    if model.diagram_type == "use_case":
+        from usecase_tlc import build_usecase
+        return build_usecase(model)
     nodes, edges = validate_model(model)
     if model.diagram_type != 'state_machine':
-        raise HTTPException(422, 'TLC behavioral verification currently supports state machines only.')
+        raise HTTPException(422, 'TLC behavioral verification currently supports state machines and use-case diagrams only.')
     if not model.verification_safety.strip() and not model.response_condition.strip():
         raise HTTPException(422, 'Enter a safety invariant or response condition before TLC verification.')
     variables = model.verification_variables
@@ -150,7 +153,7 @@ def verify(model):
         RUN_SLOT.release()
     status, stats, trace = parse_output(output, code, timed_out)
     for row in trace:
-        edge = next((m for m in mapping if re.search(r'\b' + re.escape(m['operator']) + r'\b', row['action'])), None)
+        edge = next((m for m in mapping if re.search(r'\b' + re.escape(m['operator']) + r'\b', row['action']) or (m.get('completion_operator') and re.search(r'\b' + re.escape(m['completion_operator']) + r'\b', row['action']))), None)
         if edge: row['uml_id'] = edge['uml_id']
     loop = re.search(r'Back to state (\d+)', output)
     if loop: trace.append({'action': 'lasso_loop', 'loop_to_step': int(loop[1])})
@@ -158,6 +161,8 @@ def verify(model):
     violated = re.search(r'Invariant (\w+) is violated', output)
     props = [{'name': name, 'status': 'PASSED' if status == 'PASSED' else 'VIOLATED' if (violated and violated[1] == name) or (name == 'Response' and 'Temporal properties were violated' in output) else 'NOT_COMPLETED'} for name in prop_names]
     warnings = ['Results apply to this finite boolean state-machine model, not to the generated Python implementation.', 'Labels are annotations. Only explicit guards and boolean updates affect behavior.', 'Weak fairness is assumed for every transition.' if model.weak_fairness else 'No fairness is assumed. Infinite stuttering may violate response properties.']
-    if not any(node.type == 'initial' for node in model.states):
+    if model.diagram_type == 'use_case':
+        warnings = ['TLC checks a finite request/completion abstraction. Each actor-use-case pair is requested and completed at most once.', 'Associations define permitted requests; forbidden-request contracts define additional access restrictions.', 'Generated Python is not proved equivalent to the checked TLA+ model.', 'Weak fairness is assumed for each completion action.' if model.weak_fairness else 'No fairness is assumed; requested work may remain incomplete forever.']
+    if model.diagram_type == 'state_machine' and not any(node.type == 'initial' for node in model.states):
         warnings.append('No initial node: the first listed state is the initial control location.')
-    return {'diagram_type': model.diagram_type, 'tla': tla, 'cfg': cfg, 'module_name': module, 'traceability': mapping, 'trace': trace, 'statistics': stats, 'properties': props, 'safety_satisfied': True if status == 'PASSED' and model.verification_safety.strip() else False if violated and violated[1] == 'Safety' else None, 'result': f'TLC: {status}', 'verification_kind': 'tlc', 'warnings': warnings, 'tlc_output': output, 'tlc_version': next((line for line in output.splitlines() if line.startswith('TLC')), ''), 'python_code': ''}
+    return {'diagram_type': model.diagram_type, 'tla': tla, 'cfg': cfg, 'module_name': module, 'traceability': mapping, 'trace': trace, 'statistics': stats, 'properties': props, 'safety_satisfied': True if status == 'PASSED' and (model.verification_safety.strip() or model.diagram_type == 'use_case') else False if violated and violated[1] == 'Safety' else None, 'result': f'TLC: {status}', 'verification_kind': 'tlc', 'warnings': warnings, 'tlc_output': output, 'tlc_version': next((line for line in output.splitlines() if line.startswith('TLC')), ''), 'python_code': generate_python(model)}

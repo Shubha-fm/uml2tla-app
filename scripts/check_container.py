@@ -18,7 +18,7 @@ else:
 assert health['tlc_available'], health
 with urlopen(url, timeout=5) as response:
     assert b'<html' in response.read().lower()
-for filename, expected in [('examples/tlc_safe.json','PASSED'),('examples/tlc_unsafe.json','VIOLATED')]:
+for filename, expected in [('examples/tlc_safe.json','PASSED'),('examples/tlc_unsafe.json','VIOLATED'),('examples/tlc_usecase_safe.json','PASSED'),('examples/tlc_usecase_unsafe.json','VIOLATED')]:
     with open(filename,'rb') as source:
         request = Request(url + '/api/verify', data=source.read(), headers={'Content-Type':'application/json'})
     with urlopen(request, timeout=30) as response:

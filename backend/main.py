@@ -14,7 +14,7 @@ from converter import generate_tla, generate_python
 from analysis import analyze, validate_model, graph_tla
 from tlc import verify, available, build_spec
 
-app = FastAPI(title="UML2TLA+ Five Diagram Backend", version="4.1.0")
+app = FastAPI(title="UML2TLA+ Five Diagram Backend", version="4.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +31,7 @@ ASSETS_DIR = FRONTEND_DIST / "assets"
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "UML2TLA+ five diagram backend", "version": app.version, "analysis": "structural", "tlc_available": available()}
+    return {"status": "ok", "service": "UML2TLA+ five diagram backend", "version": app.version, "analysis": "structural", "tlc_available": available(), "tlc_diagrams": ["state_machine", "use_case"]}
 
 
 @app.post("/api/convert", response_model=ConversionResponse)
@@ -41,6 +41,8 @@ def convert(model: UMLModel):
     cfg, mapping, module = "", [], ""
     if model.diagram_type in ("state_machine", "activity"):
         tla, cfg, mapping, module = graph_tla(model, nodes, edges)
+    if model.diagram_type == "use_case":
+        tla, cfg, mapping, module, _ = build_spec(model)
     python_code = generate_python(model)
     trace, statistics, properties, safety, warnings = analyze(model)
     return ConversionResponse(

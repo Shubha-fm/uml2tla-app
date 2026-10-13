@@ -37,6 +37,7 @@ class UpgradeTests(unittest.TestCase):
     def test_all_diagrams_and_python_escaping(self):
         for kind,collection in [('class','classes'),('sequence','lifelines'),('use_case','actors'),('activity','actions')]:
             payload={'name':'Demo','diagram_type':kind,collection:[{'id':'a','name':'Line\n"Quoted"\\Name'}]}
+            if kind == 'use_case': payload['use_cases']=[{'id':'u','name':'Login'}]
             r=self.client.post('/api/convert',json=payload)
             self.assertEqual(r.status_code,200,r.text)
             ast.parse(r.json()['python_code'])
@@ -56,7 +57,7 @@ class UpgradeTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/export',json={'diagram_type':'unknown'}).status_code,422)
     def test_health_version(self):
         result=self.client.get('/api/health').json()
-        self.assertEqual(result['version'],'4.1.0')
+        self.assertEqual(result['version'],'4.2.0')
         self.assertIsInstance(result['tlc_available'],bool)
     def test_dead_end(self):
         self.model['transitions']=self.model['transitions'][:2]

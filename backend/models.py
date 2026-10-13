@@ -87,7 +87,14 @@ class UMLFlow(BaseModel):
     label: str = ""
 
 
+class ForbiddenRequest(BaseModel):
+    source: str
+    target: str
+
+
 class UMLModel(BaseModel):
+    forbidden_requests: List[ForbiddenRequest] = Field(default_factory=list)
+    verify_completion: bool = False
     verification_variables: Dict[str, StrictBool] = Field(default_factory=dict)
     verification_safety: str = ""
     response_condition: str = ""
