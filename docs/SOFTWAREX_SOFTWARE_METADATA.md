@@ -9,7 +9,7 @@
 | Frontend | React |
 | API | `/api/convert` (structural), `/api/verify` (TLC, supported diagrams), `/api/health` |
 | Verification boundary | TLC for state-machine and use-case models when installed; structural analysis for conversion |
-| License | AUTHOR DECISION REQUIRED |
+| License | MIT (root `LICENSE`; included in this proposed pull request) |
 | Versioned release / DOI | TO BE ADDED AFTER TESTED RELEASE |
 | Reproduction data | TO BE ADDED AFTER VERIFIED EXPERIMENT RUNS |
 
