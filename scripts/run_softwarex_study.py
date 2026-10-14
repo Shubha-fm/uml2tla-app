@@ -31,7 +31,7 @@ def m(kind, count=2, variant=0):
     elif kind=="sequence":
         p.update(lifelines=[{"id":i,"name":"L"+i} for i in ids],messages=[{"id":"e"+str(i),"source":ids[i],"target":ids[i+1],"order":i+1} for i in range(count-1)])
     elif kind=="use_case":
-        p.update(actors=[{"id":"actor","name":"User"}],use_cases=[{"id":i,"name":"U"+i} for i in ids],associations=[{"id":"e"+str(i),"source":"actor","target":i} for i in range(count)])
+        p.update(actors=[{"id":"actor","name":"User"}],use_cases=[{"id":i,"name":"U"+i} for i in ids],associations=[{"id":"e"+str(i),"source":"actor","target":str(i)} for i in range(count)])
     return p
 # Eighteen NEW structural scenarios, not the manuscript's historical corpus.
 scenarios=[m(kind,n,j) for kind in ("state_machine","activity","class","sequence","use_case") for j,n in enumerate((2,3,5))]
