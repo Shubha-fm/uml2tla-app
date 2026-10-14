@@ -1,0 +1,47 @@
+name: Research evidence archive (v1.0.1)
+on:
+  workflow_dispatch:
+  push:
+    branches: [softwarex-experimental-archive-2026]
+    paths:
+      - 'scripts/generate_experimental_archive.py'
+      - '.github/workflows/research-archive.yml'
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout archive tooling
+        uses: actions/checkout@v4
+        with:
+          path: tooling
+      - name: Checkout immutable release
+        uses: actions/checkout@v4
+        with:
+          ref: v1.0.1
+          path: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: python -m pip install -r release/backend/requirements-dev.txt
+      - run: python release/backend/install_tlc.py
+      - name: Generate versioned archive and verify results
+        env:
+          PYTHONPATH: ${{ github.workspace }}/release/backend
+          TLC_JAR: ${{ github.workspace }}/release/backend/tools/tla2tools.jar
+          EXAMPLES_DIR: ${{ github.workspace }}/release/examples
+          ARCHIVE_OUTPUT: ${{ github.workspace }}/FormiPy_Experimental_Archive_v1.0.1
+        run: |
+          export RELEASE_SHA="$(git -C release rev-parse HEAD)"
+          echo "Pinned release commit: $RELEASE_SHA"
+          python tooling/scripts/generate_experimental_archive.py
+      - name: Upload evidence archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: FormiPy_Experimental_Archive_v1.0.1
+          path: FormiPy_Experimental_Archive_v1.0.1/
+          if-no-files-found: error
+          retention-days: 90
