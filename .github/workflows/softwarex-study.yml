@@ -1,0 +1,43 @@
+name: SoftwareX reproducible study
+on:
+  workflow_dispatch:
+  push:
+    branches: [softwarex-comprehensive-study-2026]
+    paths:
+      - 'scripts/run_softwarex_study.py'
+      - '.github/workflows/softwarex-study.yml'
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tooling
+      - uses: actions/checkout@v4
+        with:
+          ref: v1.0.1
+          path: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: python -m pip install -r release/backend/requirements-dev.txt
+      - run: python release/backend/install_tlc.py
+      - name: Execute pinned release experiment and save outputs
+        env:
+          PYTHONPATH: ${{ github.workspace }}/release/backend
+          TLC_JAR: ${{ github.workspace }}/release/backend/tools/tla2tools.jar
+          EXAMPLES_DIR: ${{ github.workspace }}/release/examples
+          ARCHIVE_OUTPUT: ${{ github.workspace }}/FormiPy_Research_Evidence_v1.0.1
+        run: |
+          export RELEASE_SHA="$(git -C release rev-parse HEAD)"
+          python tooling/scripts/run_softwarex_study.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FormiPy_Research_Evidence_v1.0.1
+          path: FormiPy_Research_Evidence_v1.0.1/
+          if-no-files-found: error
+          retention-days: 90
