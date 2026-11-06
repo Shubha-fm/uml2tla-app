@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from models import UMLModel, ConversionResponse
 from converter import generate_tla, generate_python
+from pytest_export import generate_pytest
 from analysis import analyze, validate_model, graph_tla
 from tlc import verify, available, build_spec
 
@@ -73,6 +74,8 @@ def export_project(model: UMLModel):
         archive.writestr("project.json", json.dumps({"schema_version": 2, "model": model.model_dump()}, indent=2))
         archive.writestr((result.module_name or stem) + ".tla", result.tla)
         archive.writestr(stem + ".py", result.python_code)
+        archive.writestr("tests/test_generated.py", generate_pytest(model, stem))
+        archive.writestr("pytest.ini", "[pytest]\\ntestpaths = tests\\n".replace("\\n", "\n"))
         archive.writestr("analysis.json", result.model_dump_json(indent=2))
         archive.writestr("traceability.json", json.dumps(result.traceability, indent=2))
         if result.cfg:
@@ -82,7 +85,7 @@ def export_project(model: UMLModel):
             archive.writestr(behavior_module + ".tla", behavior)
             archive.writestr(behavior_module + ".cfg", behavior_cfg)
             archive.writestr("behavior_traceability.json", json.dumps(behavior_mapping, indent=2))
-        archive.writestr("README.txt", "UML2TLA+ v4.1 project export\n\nAnalysis is structural only. This export does not run TLC. Behavior files can be checked with TLC.\nRead analysis.json for warnings and scope.\nGraph modules ignore guard labels and concurrency.\nPython is a prototype, not proved equivalent to TLA+.\nOther diagram TLA+ outputs are draft skeletons.\n")
+        archive.writestr("README.txt", "UML2TLA+ project export\n\nRun: python -m pip install pytest; python -m pytest -q\nGenerated pytest checks exercise the Python prototype, not TLA+ equivalence.\n\nAnalysis is structural only. This export does not run TLC. Behavior files can be checked with TLC.\nRead analysis.json for warnings and scope.\nGraph modules ignore guard labels and concurrency.\nPython is a prototype, not proved equivalent to TLA+.\nOther diagram TLA+ outputs are draft skeletons.\n")
     return Response(buffer.getvalue(), media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{stem}_project.zip"'})
 
 
