@@ -15,6 +15,7 @@ jobs:
       - run: pip install -r backend/requirements-dev.txt
       - run: python backend/install_tlc.py
       - run: PYTHONPATH=backend python -m unittest discover -s backend/tests -v
+      - run: PYTHONPATH=backend python -m pytest -q backend/tests/test_pytest_export.py
   frontend:
     runs-on: ubuntu-latest
     steps:
