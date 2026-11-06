@@ -75,7 +75,7 @@ def export_project(model: UMLModel):
         archive.writestr((result.module_name or stem) + ".tla", result.tla)
         archive.writestr(stem + ".py", result.python_code)
         archive.writestr("tests/test_generated.py", generate_pytest(model, stem))
-        archive.writestr("pytest.ini", "[pytest]\\ntestpaths = tests\\n".replace("\\n", "\n"))
+        archive.writestr("pytest.ini", "[pytest]\ntestpaths = tests\n")
         archive.writestr("analysis.json", result.model_dump_json(indent=2))
         archive.writestr("traceability.json", json.dumps(result.traceability, indent=2))
         if result.cfg:
