@@ -146,3 +146,29 @@ The editor separates Diagram, Contracts, Generated files and Trace explorer tabs
 Diagram drafts are preserved when switching and saved locally in the browser. Save project downloads a JSON containing all diagram drafts; Export ZIP packages the current diagram. Creating a new project resets the draft collection. Use the mobile menu for navigation on narrow screens. Existing v4 project JSON imports remain supported.
 
 Browser regression tests exercise the real TLC workflow, generated files, mobile navigation, zoomed dragging, undo/redo and draft preservation. After building the frontend and installing Java/TLC, run `npm run test:ui` from `frontend` (install Playwright Chromium with `npx playwright install chromium` first).
+
+
+## Reviewer revision: executable pytest project exports
+
+Every **Export ZIP** from the five UML diagram sections now contains
+`tests/test_generated.py`, `pytest.ini`, and the generated Python module.
+The tests exercise the generated Python prototype directly, including selected
+negative and positive paths where the diagram supplies the required elements.
+
+Extract the project ZIP and run:
+
+```bash
+python -m pip install pytest
+python -m pytest -q
+```
+
+A passing pytest run means that the generated **Python implementation** passes
+its included smoke/contract tests. It does not mean that the Python module
+implements the full UML semantics, is equivalent to the generated TLA+ model,
+or has been formally verified. Run **Verify with TLC** separately for supported
+state-machine and use-case formal abstractions. A TLC counterexample and a
+pytest failure describe different evidence, and should be reported separately.
+
+The existing full-stack FastAPI/React deployment is retained: GitHub Pages
+can host static frontend files but cannot execute the Python backend or TLC.
+CI checks all five diagram types' exported test suites.
